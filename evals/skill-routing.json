@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "id": "plan-feature",
+      "prompt": "Propose an approach before adding organization-level SSO to this repository.",
+      "expectedSkill": "plan-and-approve"
+    },
+    {
+      "id": "discover-context",
+      "prompt": "Find the security and API conventions that apply before changing the authentication service.",
+      "expectedSkill": "context-discovery"
+    },
+    {
+      "id": "break-down-migration",
+      "prompt": "Split this approved database migration into dependency-aware implementation tasks.",
+      "expectedSkill": "task-breakdown"
+    },
+    {
+      "id": "implement-approved",
+      "prompt": "Implement the approved plan and preserve my unrelated working-tree changes.",
+      "expectedSkill": "implementation"
+    },
+    {
+      "id": "generate-regression",
+      "prompt": "Add a regression test for the pagination bug and run the relevant suite.",
+      "expectedSkill": "test-generation"
+    },
+    {
+      "id": "review-branch",
+      "prompt": "Review this branch for correctness, security issues, and missing tests without changing files.",
+      "expectedSkill": "code-review"
+    },
+    {
+      "id": "research-api",
+      "prompt": "Verify the current official API contract for this SDK version and cite the source.",
+      "expectedSkill": "external-research"
+    },
+    {
+      "id": "verify-completion",
+      "prompt": "Before you say this change is done, run proportional checks and report fresh evidence.",
+      "expectedSkill": "verification-before-completion"
+    }
+  ]
+}
+

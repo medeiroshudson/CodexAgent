@@ -1,0 +1,4 @@
+interface:
+  display_name: "Code Review"
+  short_description: "Review correctness security and regressions"
+  default_prompt: "Use $code-review to review this change with evidence-backed findings."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Verify Completion"
+  short_description: "Prove completion with proportional validation"
+  default_prompt: "Use $verification-before-completion to validate this task before declaring it complete."

@@ -1,0 +1,8 @@
+node_modules/
+coverage/
+dist/
+.codex-agent/
+.plugin-eval/
+*.log
+.DS_Store
+

@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "id": "code-quality",
+      "path": "standards/code-quality.md",
+      "summary": "Project implementation and maintainability conventions.",
+      "tags": ["code", "quality", "implementation"],
+      "priority": "critical"
+    },
+    {
+      "id": "security",
+      "path": "standards/security.md",
+      "summary": "Project security boundaries and sensitive-data rules.",
+      "tags": ["security", "auth", "secrets"],
+      "priority": "critical"
+    },
+    {
+      "id": "testing",
+      "path": "standards/testing.md",
+      "summary": "Project test strategy and required evidence.",
+      "tags": ["test", "coverage", "verification"],
+      "priority": "high"
+    },
+    {
+      "id": "architecture",
+      "path": "architecture/system.md",
+      "summary": "System boundaries and major components.",
+      "tags": ["architecture", "components", "boundaries"],
+      "priority": "high"
+    },
+    {
+      "id": "project",
+      "path": "project-intelligence/project.md",
+      "summary": "Living project stack, conventions, and decisions.",
+      "tags": ["project", "stack", "decisions"],
+      "priority": "medium"
+    }
+  ]
+}
+

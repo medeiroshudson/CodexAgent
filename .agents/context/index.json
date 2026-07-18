@@ -1,0 +1,42 @@
+{
+  "$schema": "../../schemas/context-index.schema.json",
+  "version": 1,
+  "entries": [
+    {
+      "id": "code-quality",
+      "path": "standards/code-quality.md",
+      "summary": "Implementation quality, scope, and maintainability rules.",
+      "tags": ["code", "quality", "implementation"],
+      "priority": "critical"
+    },
+    {
+      "id": "security",
+      "path": "standards/security.md",
+      "summary": "Security boundaries for inputs, secrets, dependencies, and external actions.",
+      "tags": ["security", "auth", "secrets", "dependencies"],
+      "priority": "critical"
+    },
+    {
+      "id": "testing",
+      "path": "standards/testing.md",
+      "summary": "Risk-based testing and evidence requirements.",
+      "tags": ["test", "coverage", "verification", "regression"],
+      "priority": "high"
+    },
+    {
+      "id": "architecture",
+      "path": "architecture/system.md",
+      "summary": "Boundaries between guidance, skills, agents, hooks, and context.",
+      "tags": ["architecture", "plugin", "skills", "agents", "hooks"],
+      "priority": "high"
+    },
+    {
+      "id": "project-intelligence",
+      "path": "project-intelligence/project.md",
+      "summary": "Living record of project-specific decisions and conventions.",
+      "tags": ["project", "decisions", "conventions", "stack"],
+      "priority": "medium"
+    }
+  ]
+}
+

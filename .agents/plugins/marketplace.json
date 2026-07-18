@@ -1,0 +1,20 @@
+{
+  "name": "codex-agent-marketplace",
+  "interface": {
+    "displayName": "Codex Agent Marketplace"
+  },
+  "plugins": [
+    {
+      "name": "codex-agent",
+      "source": {
+        "source": "local",
+        "path": "./plugins/codex-agent"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

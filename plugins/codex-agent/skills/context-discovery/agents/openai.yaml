@@ -1,0 +1,4 @@
+interface:
+  display_name: "Context Discovery"
+  short_description: "Find relevant repository rules and patterns"
+  default_prompt: "Use $context-discovery to find the project context relevant to this task."

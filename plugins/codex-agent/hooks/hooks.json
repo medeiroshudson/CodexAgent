@@ -1,0 +1,44 @@
+{
+  "description": "Optional Codex Agent lifecycle reminders. These hooks are guardrails, not security boundaries.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/scripts/session-start.mjs\"",
+            "timeout": 10,
+            "statusMessage": "Loading Codex Agent guidance"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "apply_patch|Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/scripts/post-write.mjs\"",
+            "timeout": 10,
+            "statusMessage": "Tracking verification needs"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/scripts/stop-check.mjs\"",
+            "timeout": 10,
+            "statusMessage": "Checking completion evidence"
+          }
+        ]
+      }
+    ]
+  }
+}
+

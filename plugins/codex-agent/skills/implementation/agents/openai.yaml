@@ -1,0 +1,4 @@
+interface:
+  display_name: "Implementation"
+  short_description: "Implement approved changes incrementally"
+  default_prompt: "Use $implementation to execute the approved plan and verify each change."

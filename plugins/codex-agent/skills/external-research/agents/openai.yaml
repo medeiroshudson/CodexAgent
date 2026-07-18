@@ -1,0 +1,4 @@
+interface:
+  display_name: "External Research"
+  short_description: "Verify external APIs with authoritative sources"
+  default_prompt: "Use $external-research to verify the external API or library behavior."

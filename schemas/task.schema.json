@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Codex Agent Task",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "outcome", "scope", "context", "dependsOn", "parallelSafe", "agent", "validation", "doneWhen"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
+    "outcome": { "type": "string", "minLength": 5 },
+    "scope": { "type": "string", "minLength": 5 },
+    "context": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "dependsOn": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "parallelSafe": { "type": "boolean" },
+    "agent": { "type": "string", "minLength": 1 },
+    "validation": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+    "doneWhen": { "type": "array", "minItems": 1, "items": { "type": "string" } }
+  }
+}

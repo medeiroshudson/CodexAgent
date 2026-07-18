@@ -1,0 +1,21 @@
+{
+  "name": "@codex-agent/cli",
+  "version": "0.1.0",
+  "description": "Diagnostics and project bootstrap helpers for the codex-agent plugin.",
+  "type": "module",
+  "bin": {
+    "codex-agent": "./bin/codex-agent.mjs"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "files": [
+    "bin/",
+    "src/"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT"
+}
+

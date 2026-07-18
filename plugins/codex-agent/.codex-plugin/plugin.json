@@ -1,0 +1,39 @@
+{
+  "name": "codex-agent",
+  "version": "0.1.0",
+  "description": "Context-aware planning, implementation, testing, research, and review workflows for Codex.",
+  "author": {
+    "name": "medeiroshudson"
+  },
+  "license": "MIT",
+  "keywords": [
+    "codex",
+    "agents",
+    "planning",
+    "testing",
+    "code-review",
+    "context-aware"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Codex Agent",
+    "shortDescription": "Structured development workflows for Codex",
+    "longDescription": "Plan changes, discover repository context, delegate focused work, implement incrementally, generate tests, research external APIs, and review results with evidence.",
+    "developerName": "medeiroshudson",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Plan and implement this feature with repository context.",
+      "Review this change for correctness and regressions.",
+      "Find the relevant project conventions before coding."
+    ],
+    "brandColor": "#101828",
+    "composerIcon": "./assets/codex-agent.svg",
+    "logo": "./assets/codex-agent.svg",
+    "screenshots": []
+  }
+}
