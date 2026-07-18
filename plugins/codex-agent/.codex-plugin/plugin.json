@@ -1,6 +1,6 @@
 {
   "name": "codex-agent",
-  "version": "0.1.0+codex.20260718163959",
+  "version": "0.1.0+codex.20260718182211",
   "description": "Context-aware planning, implementation, testing, research, and review workflows for Codex.",
   "author": {
     "name": "medeiroshudson"
@@ -18,7 +18,7 @@
   "interface": {
     "displayName": "Codex Agent",
     "shortDescription": "Structured development workflows for Codex",
-    "longDescription": "Plan changes, discover repository context, delegate focused work, implement incrementally, generate tests, research external APIs, and review results with evidence.",
+    "longDescription": "Plan changes, discover and curate repository context, delegate focused work, implement incrementally, generate tests, research external APIs, and review results with evidence.",
     "developerName": "medeiroshudson",
     "category": "Developer Tools",
     "capabilities": [
@@ -30,7 +30,8 @@
       "Plan and implement this feature with repository context.",
       "Review this change for correctness and regressions.",
       "Find the relevant project conventions before coding.",
-      "Analyze this repository and preview a project-specific Codex setup."
+      "Analyze this repository and preview a project-specific Codex setup.",
+      "Review this project knowledge and save it only after showing me a preview."
     ],
     "brandColor": "#101828",
     "composerIcon": "./assets/codex-agent.svg",

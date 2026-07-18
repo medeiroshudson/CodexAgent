@@ -13,7 +13,9 @@
 | `hooks/` | Trusted deterministic lifecycle reminders |
 | `project-init` skill | Discovery orchestration, evidence review, preview, and approval gate |
 | `project-init/scripts/project-init.mjs` | Deterministic analysis, validation, rendering, merge, backup, and apply |
-| `packages/codex-agent-cli/` | Thin CLI for initialization, diagnosis, migration, and context indexing |
+| `context-curation` skill | Durable-knowledge classification, deduplication, preview, and explicit approval |
+| `context-curation/scripts/context-save.mjs` | Deterministic context validation, storage, backup, and index coordination |
+| `packages/codex-agent-cli/` | Thin CLI for initialization, diagnosis, migration, context storage, and indexing |
 | `evals/` | Routing contracts and behavioral benchmark inputs |
 
 ## Execution flow
@@ -45,3 +47,18 @@ $project-init
 ```
 
 The intermediate `.codex-agent/analysis.json` records evidence and confidence. Generated Markdown and TOML use managed markers so refresh can preserve manual content. Existing unmarked TOML is treated as a conflict; forced replacement creates a backup first.
+
+## Durable context curation
+
+Context persistence uses a separate approval boundary:
+
+```text
+task completion
+  -> durability and sensitivity assessment
+  -> duplicate search through context-discovery
+  -> exact destination and Markdown preview
+  -> explicit user approval
+  -> coordinated context document and index write
+```
+
+The `Stop` hook only reminds the active agent to assess candidates. It never writes files. Curated entries live under category directories and remain optional; `context-discovery` must select them explicitly. Context updates preserve manual Markdown outside managed markers and create backups before replacement.

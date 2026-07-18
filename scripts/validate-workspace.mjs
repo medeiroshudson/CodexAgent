@@ -55,11 +55,14 @@ export const validateWorkspace = (root = defaultRoot) => {
   const manifestPath = requireFile("plugins/codex-agent/.codex-plugin/plugin.json");
   const marketplacePath = requireFile(".agents/plugins/marketplace.json");
   const indexPath = requireFile(".agents/context/index.json");
+  const contextProposalSchemaPath = requireFile("schemas/context-proposal.schema.json");
   const cliManifestPath = requireFile("packages/codex-agent-cli/package.json");
   const publishWorkflowPath = requireFile(".github/workflows/publish-cli.yml");
   const bootstrapWorkflowPath = requireFile(".github/workflows/bootstrap-cli.yml");
   requireFile("package-lock.json");
   requireFile("plugins/codex-agent/hooks/hooks.json");
+
+  if (fs.existsSync(contextProposalSchemaPath)) parseJson(contextProposalSchemaPath, errors);
 
   const manifest = fs.existsSync(manifestPath) ? parseJson(manifestPath, errors) : null;
   if (manifest) {
@@ -147,7 +150,7 @@ export const validateWorkspace = (root = defaultRoot) => {
   const skillDirectories = fs.existsSync(skillsRoot)
     ? fs.readdirSync(skillsRoot, { withFileTypes: true }).filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort()
     : [];
-  if (skillDirectories.length !== 9) errors.push(`expected 9 skills, found ${skillDirectories.length}`);
+  if (skillDirectories.length !== 10) errors.push(`expected 10 skills, found ${skillDirectories.length}`);
   for (const skill of skillDirectories) {
     const skillFile = path.join(skillsRoot, skill, "SKILL.md");
     const metadataFile = path.join(skillsRoot, skill, "agents", "openai.yaml");
@@ -173,7 +176,7 @@ export const validateWorkspace = (root = defaultRoot) => {
   const agentCount = listFiles(path.join(workspace, "plugins", "codex-agent", "agents")).filter((file) => file.endsWith(".md")).length;
   const commandCount = listFiles(path.join(workspace, "plugins", "codex-agent", "commands")).filter((file) => file.endsWith(".md")).length;
   if (agentCount !== 6) errors.push(`expected 6 plugin agents, found ${agentCount}`);
-  if (commandCount !== 6) errors.push(`expected 6 commands, found ${commandCount}`);
+  if (commandCount !== 7) errors.push(`expected 7 commands, found ${commandCount}`);
 
   const predecessorName = ["Open", "Agents", "Control"].join("");
   const predecessorInitialisms = [["O", "A", "C"].join(""), ["A", "O", "C"].join("")];

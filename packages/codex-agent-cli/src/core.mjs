@@ -7,8 +7,26 @@ import {
   validateAnalysisEvidence,
   validateProjectAnalysis
 } from "../../../plugins/codex-agent/skills/project-init/scripts/project-init.mjs";
+import {
+  buildContextIndex,
+  normalizeContextProposal,
+  renderContextProposal,
+  saveContextProposal,
+  validateContextProposal
+} from "../../../plugins/codex-agent/skills/context-curation/scripts/context-save.mjs";
 
-export { analyzeProject, initializeProject, renderProjectFiles, validateAnalysisEvidence, validateProjectAnalysis };
+export {
+  analyzeProject,
+  buildContextIndex,
+  initializeProject,
+  normalizeContextProposal,
+  renderContextProposal,
+  renderProjectFiles,
+  saveContextProposal,
+  validateAnalysisEvidence,
+  validateContextProposal,
+  validateProjectAnalysis
+};
 
 export const listFiles = (root) => {
   if (!fs.existsSync(root)) return [];
@@ -80,69 +98,6 @@ export const migrateContext = ({ root, source, dryRun = false, force = false }) 
     buildContextIndex({ root: projectRoot });
   }
   return result;
-};
-
-const firstHeading = (content, fallback) => {
-  const match = content.match(/^#\s+(.+)$/m);
-  return match?.[1]?.trim() || fallback;
-};
-
-const firstParagraph = (content, fallback) => {
-  const paragraphs = content
-    .split(/\n\s*\n/)
-    .map((paragraph) => paragraph.replace(/^#+\s+.*$/gm, "").replace(/^[-*]\s+/gm, "").trim())
-    .filter(Boolean);
-  return (paragraphs[0] || fallback).replace(/\s+/g, " ").slice(0, 240);
-};
-
-const slug = (value) => value
-  .toLowerCase()
-  .replace(/[^a-z0-9]+/g, "-")
-  .replace(/^-|-$/g, "")
-  .slice(0, 64);
-
-export const buildContextIndex = ({ root, dryRun = false }) => {
-  const projectRoot = path.resolve(root);
-  const contextRoot = path.join(projectRoot, ".agents", "context");
-  if (!fs.existsSync(contextRoot)) throw new Error(`Context directory not found: ${contextRoot}`);
-
-  const indexPath = path.join(contextRoot, "index.json");
-  let prior = { entries: [] };
-  if (fs.existsSync(indexPath)) {
-    try { prior = JSON.parse(fs.readFileSync(indexPath, "utf8")); } catch { prior = { entries: [] }; }
-  }
-  const priorByPath = new Map((prior.entries ?? []).map((entry) => [entry.path, entry]));
-
-  const entries = listFiles(contextRoot)
-    .filter((file) => file.endsWith(".md"))
-    .map((file) => {
-      const relative = path.relative(contextRoot, file).split(path.sep).join("/");
-      const content = fs.readFileSync(file, "utf8");
-      const title = firstHeading(content, path.basename(file, ".md"));
-      const existing = priorByPath.get(relative);
-      const tags = [...new Set([
-        ...relative.replace(/\.md$/, "").split("/"),
-        ...title.toLowerCase().split(/[^a-z0-9_-]+/).filter((term) => term.length > 2)
-      ].map(slug).filter(Boolean))].slice(0, 10);
-      return {
-        id: existing?.id || slug(relative.replace(/\.md$/, "").replaceAll("/", "-")),
-        path: relative,
-        summary: existing?.summary || firstParagraph(content, `${title} project context.`),
-        tags: existing?.tags?.length ? existing.tags : tags,
-        priority: existing?.priority || "medium"
-      };
-    })
-    .sort((left, right) => left.path.localeCompare(right.path));
-
-  const schemaPath = path.join(projectRoot, "schemas", "context-index.schema.json");
-  const index = {
-    ...(fs.existsSync(schemaPath) ? { $schema: "../../schemas/context-index.schema.json" } : {}),
-    version: 1,
-    entries
-  };
-
-  if (!dryRun) fs.writeFileSync(indexPath, `${JSON.stringify(index, null, 2)}\n`);
-  return { path: indexPath, index, dryRun };
 };
 
 const check = (checks, name, ok, detail) => checks.push({ name, ok: Boolean(ok), detail });
@@ -234,6 +189,9 @@ export const evaluateRouting = ({ root }) => {
     ids.add(item.id);
     if (!item.prompt || item.prompt.length < 20) failures.push(`${item.id}: prompt is too short`);
     if (!available.has(item.expectedSkill)) failures.push(`${item.id}: missing skill ${item.expectedSkill}`);
+    if (item.expectedDisposition && !["save-after-approval", "discard", "route-to-agents"].includes(item.expectedDisposition)) {
+      failures.push(`${item.id}: invalid expectedDisposition`);
+    }
   }
   return { ok: failures.length === 0, scenarios: suite.cases?.length ?? 0, skills: available.size, failures };
 };

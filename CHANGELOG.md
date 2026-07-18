@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Added the `context-curation` skill, `/remember` command, and approval-gated `context save` workflow.
+- Added evidence validation, duplicate detection, secret screening, managed updates, backups, and coordinated context/index writes.
 - Added the `project-init` skill and `/init` command.
 - Replaced generic template copying with evidence-backed repository analysis, preview, managed refresh, and conflict backups.
 

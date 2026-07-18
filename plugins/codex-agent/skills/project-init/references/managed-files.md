@@ -15,4 +15,6 @@ The initializer can create or refresh:
 
 Markdown uses HTML managed markers; TOML uses comment markers. Refresh replaces only the matching managed region. Manual Markdown outside the region is retained. Custom context index entries are retained.
 
+Entries created by `$context-curation` use non-managed IDs and category directories, so project refresh preserves them.
+
 Existing TOML without matching markers is a conflict because merging duplicate TOML keys could silently change behavior. `--force` replaces that file only after writing a backup. Malformed or one-sided managed markers are also conflicts.

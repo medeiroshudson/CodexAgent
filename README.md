@@ -1,6 +1,6 @@
 # Codex Agent
 
-`codex-agent` is a native Codex plugin for context-aware software development. It packages focused workflows for planning, repository context discovery, task decomposition, implementation, testing, external research, code review, and completion verification.
+`codex-agent` is a native Codex plugin for context-aware software development. It packages focused workflows for planning, repository context discovery and curation, task decomposition, implementation, testing, external research, code review, and completion verification.
 
 The plugin uses Codex-native boundaries:
 
@@ -81,12 +81,40 @@ Invoke skills explicitly with `$` or use natural requests that match their descr
 - `$external-research`
 - `$verification-before-completion`
 - `$project-init`
+- `$context-curation`
 
-Commands provide short entrypoints: `/init`, `/plan`, `/context`, `/review`, `/test`, and `/doctor`.
+Commands provide short entrypoints: `/init`, `/remember`, `/plan`, `/context`, `/review`, `/test`, and `/doctor`.
 
 ## Context model
 
 Files under `.agents/context/` are not automatically injected into every task. The context index describes optional knowledge, and `$context-discovery` selects only the files relevant to the current request.
+
+When a completed task reveals a non-obvious and reusable decision, constraint, operation, domain concept, or recurring pitfall, `$context-curation` may offer one optional proposal. It reports the task outcome independently and never saves learned context without explicit approval. Use `/remember` to request this workflow directly.
+
+Curated knowledge is stored separately from initializer-managed files:
+
+```text
+.agents/context/
+├── decisions/
+├── constraints/
+├── operations/
+├── domain/
+└── pitfalls/
+```
+
+For terminal or automation use, provide a proposal JSON and preview it first:
+
+```bash
+npx --yes @codex-agent/cli@latest context save --proposal context-proposal.json --json
+```
+
+After reviewing the destination, evidence, Markdown diff, and conflicts, apply it explicitly:
+
+```bash
+npx --yes @codex-agent/cli@latest context save --proposal context-proposal.json --apply --json
+```
+
+Updating an existing entry additionally requires `--update` and creates backups under `.codex-agent/backups/`. Rejected proposals leave no repository state. Rules that must apply to every task belong in `AGENTS.md`, not optional context.
 
 Rebuild the index after adding context:
 

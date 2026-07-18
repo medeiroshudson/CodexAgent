@@ -12,9 +12,9 @@ description: Validate an implementation before claiming it is complete by runnin
 5. Exercise runtime or rendered behavior when static checks cannot prove it.
 6. Confirm generated files, manifests, paths, links, and installation instructions.
 7. Review failures and warnings; do not relabel them as success.
-8. Report evidence with exact commands and outcomes, plus material untested risk.
+8. Apply `$context-curation` criteria to knowledge discovered during the task. If a high-value durable candidate exists, report completion normally and present one optional context proposal; never persist it without explicit approval.
+9. Report evidence with exact commands and outcomes, plus material untested risk.
 
 Use fresh command output. Do not rely on a prior agent's summary as proof.
 
 Read [references/evidence-contract.md](references/evidence-contract.md) for the completion report shape.
-

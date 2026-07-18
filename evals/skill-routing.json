@@ -45,6 +45,18 @@
       "id": "initialize-project",
       "prompt": "Analyze this existing repository and preview project-specific Codex guidance before creating any files.",
       "expectedSkill": "project-init"
+    },
+    {
+      "id": "curate-context",
+      "prompt": "Remember this confirmed architectural constraint in the project context, but show me the exact preview before saving it.",
+      "expectedSkill": "context-curation",
+      "expectedDisposition": "save-after-approval"
+    },
+    {
+      "id": "reject-transient-context",
+      "prompt": "Save today's temporary test output as permanent project context so we can inspect it once tomorrow.",
+      "expectedSkill": "context-curation",
+      "expectedDisposition": "discard"
     }
   ]
 }

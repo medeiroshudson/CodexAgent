@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { buildContextIndex, diagnoseProject, evaluateRouting, initializeProject, migrateContext } from "./core.mjs";
+import { buildContextIndex, diagnoseProject, evaluateRouting, initializeProject, migrateContext, saveContextProposal } from "./core.mjs";
 
 const usage = `Codex Agent CLI
 
@@ -9,6 +9,7 @@ Usage:
   codex-agent migrate --from PATH [--root PATH] [--dry-run] [--force] [--json]
   codex-agent doctor [--root PATH] [--json]
   codex-agent context index [--root PATH] [--dry-run] [--json]
+  codex-agent context save --proposal FILE [--root PATH] [--apply] [--update] [--json]
   codex-agent eval [--root PATH] [--json]
   codex-agent help
 `;
@@ -23,6 +24,7 @@ const flags = (args) => ({
   dryRun: args.includes("--dry-run"),
   apply: args.includes("--apply"),
   refresh: args.includes("--refresh"),
+  update: args.includes("--update"),
   force: args.includes("--force"),
   json: args.includes("--json")
 });
@@ -76,6 +78,18 @@ export const main = async (args) => {
   if (command === "context" && subcommand === "index") {
     const result = buildContextIndex(options);
     write({ path: result.path, entries: result.index.entries.length, dryRun: result.dryRun }, options.json);
+    return;
+  }
+
+  if (command === "context" && subcommand === "save") {
+    const proposalFile = option(args, "--proposal");
+    if (!proposalFile) throw new Error("context save requires --proposal FILE");
+    const absolute = path.resolve(proposalFile);
+    if (!fs.existsSync(absolute)) throw new Error(`Proposal file not found: ${absolute}`);
+    const proposal = JSON.parse(fs.readFileSync(absolute, "utf8"));
+    const result = saveContextProposal({ ...options, proposal });
+    write(result, options.json);
+    if (result.conflicts.length) process.exitCode = 2;
     return;
   }
 

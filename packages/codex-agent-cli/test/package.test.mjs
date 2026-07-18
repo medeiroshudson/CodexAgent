@@ -56,4 +56,28 @@ test("published tarball runs without the source workspace", () => {
   const result = JSON.parse(init.stdout);
   assert.equal(result.mode, "preview");
   assert.equal(fs.realpathSync(result.root), fs.realpathSync(fixture));
+
+  const proposalPath = path.join(target, "proposal.json");
+  fs.writeFileSync(proposalPath, JSON.stringify({
+    version: 1,
+    title: "Use the fixture manifest as durable evidence",
+    kind: "decision",
+    summary: "The fixture manifest is the authoritative source for package identity.",
+    scope: "fixture package",
+    contentMarkdown: "Read the package name from the repository manifest instead of duplicating it in automation.",
+    evidence: [{ path: "package.json", note: "The manifest declares the package name." }],
+    tags: ["package", "manifest"],
+    priority: "medium",
+    confidence: "high"
+  }));
+  const contextPreview = run(process.execPath, [executable, "context", "save", "--proposal", proposalPath, "--json"], { cwd: fixture });
+  assert.equal(contextPreview.status, 0, contextPreview.stderr);
+  assert.equal(JSON.parse(contextPreview.stdout).mode, "preview");
+  assert.equal(fs.existsSync(path.join(fixture, ".agents")), false);
+
+  const contextApply = run(process.execPath, [executable, "context", "save", "--proposal", proposalPath, "--apply", "--json"], { cwd: fixture });
+  assert.equal(contextApply.status, 0, contextApply.stderr);
+  const contextResult = JSON.parse(contextApply.stdout);
+  assert.equal(contextResult.applied, true);
+  assert.equal(fs.existsSync(path.join(fixture, ".agents", "context", contextResult.path)), true);
 });
