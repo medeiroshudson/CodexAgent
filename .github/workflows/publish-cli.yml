@@ -2,26 +2,37 @@ name: Publish CLI
 
 on:
   push:
+    branches:
+      - main
     tags:
       - "cli-v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing cli-v tag to publish
+        required: true
+        type: string
 
 permissions:
   contents: read
-  id-token: write
 
 concurrency:
-  group: npm-publish-${{ github.ref }}
+  group: npm-publish-cli
   cancel-in-progress: false
 
 jobs:
-  publish:
+  verify:
     if: github.repository == 'medeiroshudson/CodexAgent'
     runs-on: ubuntu-latest
-    environment: npm
     timeout-minutes: 10
+    outputs:
+      should_publish: ${{ steps.registry.outputs.should_publish }}
+      version: ${{ steps.registry.outputs.version }}
     steps:
-      - name: Check out release tag
+      - name: Check out source
         uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v6
@@ -34,9 +45,10 @@ jobs:
         run: npm ci
 
       - name: Verify release tag
+        if: github.event_name == 'workflow_dispatch' || github.ref_type == 'tag'
         run: node scripts/check-cli-release.mjs
         env:
-          CLI_RELEASE_TAG: ${{ github.ref_name }}
+          CLI_RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
 
       - name: Build CLI package
         run: npm run build --workspace @codex-agent/cli
@@ -46,6 +58,48 @@ jobs:
 
       - name: Validate workspace
         run: npm run validate
+
+      - name: Check package version on npm
+        id: registry
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./packages/codex-agent-cli/package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if npm view "@codex-agent/cli@$VERSION" version --json >/dev/null 2>&1; then
+            echo "should_publish=false" >> "$GITHUB_OUTPUT"
+            echo "@codex-agent/cli@$VERSION is already published; skipping publish."
+          else
+            echo "should_publish=true" >> "$GITHUB_OUTPUT"
+            echo "@codex-agent/cli@$VERSION is not published yet."
+          fi
+
+  publish:
+    needs: verify
+    if: needs.verify.outputs.should_publish == 'true'
+    runs-on: ubuntu-latest
+    environment: npm
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Check out verified source
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+          package-manager-cache: false
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build CLI package
+        run: npm run build --workspace @codex-agent/cli
 
       - name: Publish public package with OIDC
         run: npm publish --workspace @codex-agent/cli --access public

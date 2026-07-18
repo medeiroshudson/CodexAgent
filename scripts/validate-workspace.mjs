@@ -97,11 +97,16 @@ export const validateWorkspace = (root = defaultRoot) => {
   if (fs.existsSync(publishWorkflowPath)) {
     const workflow = fs.readFileSync(publishWorkflowPath, "utf8");
     for (const required of [
+      'branches:\n      - main',
       'tags:\n      - "cli-v*"',
+      "workflow_dispatch:",
+      "Existing cli-v tag to publish",
       "id-token: write",
       'node-version: "24"',
       "node scripts/check-cli-release.mjs",
       "npm run build --workspace @codex-agent/cli",
+      'npm view "@codex-agent/cli@$VERSION" version --json',
+      "if: needs.verify.outputs.should_publish == 'true'",
       "npm publish --workspace @codex-agent/cli --access public"
     ]) {
       if (!workflow.includes(required)) errors.push(`publish workflow missing: ${required.replaceAll("\n", " ")}`);

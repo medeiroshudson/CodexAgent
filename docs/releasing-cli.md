@@ -1,6 +1,8 @@
 # Releasing the CLI
 
-The `@codex-agent/cli` package is published by `.github/workflows/publish-cli.yml` from tags named `cli-v<version>`. The workflow builds and tests the package on Node.js 24, validates the workspace, and publishes to npm with a short-lived OIDC credential.
+The `@codex-agent/cli` package is published by `.github/workflows/publish-cli.yml`. The workflow runs for pushes to `main`, tags named `cli-v<version>`, and manual dispatches. It builds and tests the package on Node.js 24, validates the workspace, and publishes to npm with a short-lived OIDC credential.
+
+Before entering the protected `npm` environment, the workflow checks whether the current package version already exists. Existing versions are skipped successfully, so ordinary commits to `main` do not attempt to republish the same immutable npm version.
 
 ## One-time npm setup
 
@@ -42,7 +44,7 @@ The workflow requires `id-token: write` and uses a GitHub-hosted runner. Do not 
    npm pack --workspace @codex-agent/cli --dry-run
    ```
 
-3. Commit the version change, create the matching tag, and push both. For version `0.1.1`:
+3. Commit and push the version change to `main`. This automatically publishes the version if it does not exist on npm. A matching tag can be created for release history. For version `0.1.1`:
 
    ```bash
    git tag cli-v0.1.1
@@ -51,3 +53,15 @@ The workflow requires `id-token: write` and uses a GitHub-hosted runner. Do not 
    ```
 
 The workflow rejects a tag that does not exactly match the package version. The `npm` GitHub environment can optionally require reviewers to add a manual approval gate before publishing.
+
+## Run manually
+
+Open **GitHub → Actions → Publish CLI → Run workflow**, enter an existing tag such as `cli-v0.1.1`, and start the run. The workflow checks out that tag and confirms it matches the package version before publishing.
+
+The equivalent GitHub CLI command is:
+
+```bash
+gh workflow run publish-cli.yml --ref main -f tag=cli-v0.1.1
+```
+
+Manual and tag-triggered runs also skip the publish job when that immutable npm version already exists.
