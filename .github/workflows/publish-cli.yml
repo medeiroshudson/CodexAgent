@@ -4,35 +4,19 @@ on:
   push:
     branches:
       - main
-    tags:
-      - "cli-v*"
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: Existing cli-v tag to publish
-        required: true
-        type: string
 
 permissions:
   contents: read
 
-concurrency:
-  group: npm-publish-cli
-  cancel-in-progress: false
-
 jobs:
-  verify:
+  publish:
     if: github.repository == 'medeiroshudson/CodexAgent'
     runs-on: ubuntu-latest
+    environment: npm
     timeout-minutes: 10
-    outputs:
-      should_publish: ${{ steps.registry.outputs.should_publish }}
-      version: ${{ steps.registry.outputs.version }}
     steps:
-      - name: Check out source
+      - name: Check out main commit
         uses: actions/checkout@v6
-        with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v6
@@ -44,11 +28,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Verify release tag
-        if: github.event_name == 'workflow_dispatch' || github.ref_type == 'tag'
-        run: node scripts/check-cli-release.mjs
-        env:
-          CLI_RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+      - name: Derive commit version
+        id: version
+        shell: bash
+        run: |
+          VERSION=$(node scripts/derive-cli-version.mjs)
+          npm version "$VERSION" --workspace @codex-agent/cli --no-git-tag-version --allow-same-version
+          echo "value=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Build CLI package
         run: npm run build --workspace @codex-agent/cli
@@ -59,51 +45,15 @@ jobs:
       - name: Validate workspace
         run: npm run validate
 
-      - name: Check package version on npm
-        id: registry
+      - name: Publish commit as latest
         shell: bash
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          VERSION=$(node -p "require('./packages/codex-agent-cli/package.json').version")
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          if ! npm view "@codex-agent/cli" name --json >/dev/null; then
-            echo "::error::@codex-agent/cli does not exist or is not readable. Publish the first version manually with an npm account that owns the @codex-agent scope, then configure Trusted Publishing."
+          if [[ -z "$NODE_AUTH_TOKEN" ]]; then
+            echo "::error::NPM_TOKEN is not configured in the npm GitHub environment."
             exit 1
           fi
-          if npm view "@codex-agent/cli@$VERSION" version --json >/dev/null 2>&1; then
-            echo "should_publish=false" >> "$GITHUB_OUTPUT"
-            echo "@codex-agent/cli@$VERSION is already published; skipping publish."
-          else
-            echo "should_publish=true" >> "$GITHUB_OUTPUT"
-            echo "@codex-agent/cli@$VERSION is not published yet."
-          fi
-
-  publish:
-    needs: verify
-    if: needs.verify.outputs.should_publish == 'true'
-    runs-on: ubuntu-latest
-    environment: npm
-    timeout-minutes: 10
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-      - name: Check out verified source
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: "24"
-          registry-url: "https://registry.npmjs.org"
-          package-manager-cache: false
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build CLI package
-        run: npm run build --workspace @codex-agent/cli
-
-      - name: Publish public package with OIDC
-        run: npm publish --workspace @codex-agent/cli --access public
+          npm whoami
+          npm publish --workspace @codex-agent/cli --access public --tag latest
+          echo "Published @codex-agent/cli@${{ steps.version.outputs.value }} from ${GITHUB_SHA}." >> "$GITHUB_STEP_SUMMARY"

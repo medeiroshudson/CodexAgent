@@ -31,7 +31,7 @@ For local iteration, update the plugin cachebuster through the plugin-creator he
 
 ## CLI releases
 
-The CLI is published from `.github/workflows/publish-cli.yml` when a `cli-v*` tag is pushed. The tag must exactly match the version in `packages/codex-agent-cli/package.json`. Publishing uses npm Trusted Publishing with OIDC and does not require a repository secret.
+Every commit pushed to `main` publishes a unique CLI version derived from the base version, GitHub run number, and commit SHA. Publishing uses the `NPM_TOKEN` secret from the protected `npm` environment; release tags are not used.
 
 See [docs/releasing-cli.md](docs/releasing-cli.md) for initial npm setup and the release checklist.
 

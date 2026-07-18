@@ -58,7 +58,7 @@ export const validateWorkspace = (root = defaultRoot) => {
   const contextProposalSchemaPath = requireFile("schemas/context-proposal.schema.json");
   const cliManifestPath = requireFile("packages/codex-agent-cli/package.json");
   const publishWorkflowPath = requireFile(".github/workflows/publish-cli.yml");
-  const bootstrapWorkflowPath = requireFile(".github/workflows/bootstrap-cli.yml");
+  requireFile("scripts/derive-cli-version.mjs");
   requireFile("package-lock.json");
   requireFile("plugins/codex-agent/hooks/hooks.json");
 
@@ -89,6 +89,7 @@ export const validateWorkspace = (root = defaultRoot) => {
   const cliManifest = fs.existsSync(cliManifestPath) ? parseJson(cliManifestPath, errors) : null;
   if (cliManifest) {
     if (cliManifest.name !== "@codex-agent/cli") errors.push("CLI package name must be @codex-agent/cli");
+    if (!/^\d+\.\d+\.\d+$/.test(cliManifest.version ?? "")) errors.push("CLI package base version must be stable SemVer");
     if (cliManifest.bin?.["codex-agent"] !== "dist/codex-agent.mjs") errors.push("CLI package bin must target dist/codex-agent.mjs");
     if (!cliManifest.files?.includes("dist/")) errors.push("CLI package must publish dist/");
     if (cliManifest.scripts?.prepare) errors.push("CLI package must not build automatically during local install");
@@ -102,38 +103,25 @@ export const validateWorkspace = (root = defaultRoot) => {
     const workflow = fs.readFileSync(publishWorkflowPath, "utf8");
     for (const required of [
       'branches:\n      - main',
-      'tags:\n      - "cli-v*"',
-      "workflow_dispatch:",
-      "Existing cli-v tag to publish",
-      "id-token: write",
       'node-version: "24"',
-      "node scripts/check-cli-release.mjs",
+      "node scripts/derive-cli-version.mjs",
+      "--no-git-tag-version",
       "npm run build --workspace @codex-agent/cli",
-      'npm view "@codex-agent/cli" name --json',
-      'npm view "@codex-agent/cli@$VERSION" version --json',
-      "if: needs.verify.outputs.should_publish == 'true'",
-      "npm publish --workspace @codex-agent/cli --access public"
+      "NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}",
+      "npm publish --workspace @codex-agent/cli --access public --tag latest"
     ]) {
       if (!workflow.includes(required)) errors.push(`publish workflow missing: ${required.replaceAll("\n", " ")}`);
     }
-    if (/NPM_TOKEN|NODE_AUTH_TOKEN/.test(workflow)) errors.push("publish workflow must use OIDC instead of an npm token");
+    if (/^\s+tags:/m.test(workflow)) errors.push("publish workflow must not use Git tags");
+    if (workflow.includes("workflow_dispatch:")) errors.push("publish workflow must not expose manual releases");
+    if (workflow.includes("id-token: write")) errors.push("publish workflow must not request OIDC permissions");
   }
 
-  if (fs.existsSync(bootstrapWorkflowPath)) {
-    const workflow = fs.readFileSync(bootstrapWorkflowPath, "utf8");
-    for (const required of [
-      "workflow_dispatch:",
-      "Type @codex-agent/cli@<version>",
-      "environment: npm",
-      "NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}",
-      "npm whoami",
-      "npm publish --workspace @codex-agent/cli --access public"
-    ]) {
-      if (!workflow.includes(required)) errors.push(`bootstrap workflow missing: ${required}`);
-    }
-    if (workflow.includes("id-token: write")) errors.push("bootstrap workflow must not request an OIDC token");
-    if (/^\s+push:/m.test(workflow)) errors.push("bootstrap workflow must remain manual-only");
-  }
+  for (const obsolete of [
+    ".github/workflows/bootstrap-cli.yml",
+    "scripts/check-cli-release.mjs",
+    "tests/release.test.mjs"
+  ]) if (fs.existsSync(path.join(workspace, obsolete))) errors.push(`${obsolete}: obsolete release artifact must be removed`);
 
   const contextIndex = fs.existsSync(indexPath) ? parseJson(indexPath, errors) : null;
   const contextRoot = path.dirname(indexPath);
