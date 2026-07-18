@@ -29,6 +29,16 @@ python3 /path/to/plugin-creator/scripts/validate_plugin.py plugins/codex-agent
 
 For local iteration, update the plugin cachebuster through the plugin-creator helper and reinstall from `codex-agent-marketplace`. Start a new Codex task after reinstalling.
 
+## Plugin releases
+
+The plugin marketplace is published from `.github/workflows/publish-plugin.yml`
+when a `plugin-v*` tag is pushed. The tag must exactly match the complete version
+in `plugins/codex-agent/.codex-plugin/plugin.json`, including its Codex
+cachebuster suffix.
+
+See [docs/releasing-plugin.md](docs/releasing-plugin.md) for the versioning,
+validation, tagging, and recovery procedure.
+
 ## CLI releases
 
 The CLI is published from `.github/workflows/publish-cli.yml` when a `cli-v*` tag is pushed. The tag must exactly match the version in `packages/codex-agent-cli/package.json`. Publishing uses npm Trusted Publishing with OIDC and does not require a repository secret.

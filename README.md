@@ -14,12 +14,23 @@ The plugin uses Codex-native boundaries:
 
 ## Install
 
-Add this repository as a marketplace source, then install the plugin:
+Add the GitHub repository as a marketplace source, then install the plugin:
 
 ```bash
-codex plugin marketplace add /absolute/path/to/codex-agent
+codex plugin marketplace add medeiroshudson/CodexAgent --ref main
 codex plugin add codex-agent@codex-agent-marketplace
 ```
+
+Refresh the repository snapshot when a new plugin release is available:
+
+```bash
+codex plugin marketplace upgrade codex-agent-marketplace
+codex plugin add codex-agent@codex-agent-marketplace
+```
+
+For local development, replace the GitHub source with the absolute path to this
+repository. See [Releasing the plugin](docs/releasing-plugin.md) for immutable
+release tags and the publication workflow.
 
 Verify discovery:
 
@@ -156,7 +167,9 @@ npm run validate
 npm run eval
 ```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for plugin and skill validation commands and [docs/releasing-cli.md](docs/releasing-cli.md) for the npm release process.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for plugin and skill validation commands,
+[docs/releasing-plugin.md](docs/releasing-plugin.md) for marketplace releases,
+and [docs/releasing-cli.md](docs/releasing-cli.md) for the npm release process.
 
 ## Architecture
 

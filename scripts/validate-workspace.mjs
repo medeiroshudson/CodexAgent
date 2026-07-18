@@ -58,6 +58,7 @@ export const validateWorkspace = (root = defaultRoot) => {
   const contextProposalSchemaPath = requireFile("schemas/context-proposal.schema.json");
   const cliManifestPath = requireFile("packages/codex-agent-cli/package.json");
   const publishWorkflowPath = requireFile(".github/workflows/publish-cli.yml");
+  const publishPluginWorkflowPath = requireFile(".github/workflows/publish-plugin.yml");
   const bootstrapWorkflowPath = requireFile(".github/workflows/bootstrap-cli.yml");
   requireFile("package-lock.json");
   requireFile("plugins/codex-agent/hooks/hooks.json");
@@ -117,6 +118,28 @@ export const validateWorkspace = (root = defaultRoot) => {
       if (!workflow.includes(required)) errors.push(`publish workflow missing: ${required.replaceAll("\n", " ")}`);
     }
     if (/NPM_TOKEN|NODE_AUTH_TOKEN/.test(workflow)) errors.push("publish workflow must use OIDC instead of an npm token");
+  }
+
+  if (fs.existsSync(publishPluginWorkflowPath)) {
+    const workflow = fs.readFileSync(publishPluginWorkflowPath, "utf8");
+    for (const required of [
+      'tags:\n      - "plugin-v*"',
+      "workflow_dispatch:",
+      "Existing plugin-v tag to publish",
+      "format('refs/tags/{0}', inputs.tag)",
+      'node-version: "24"',
+      "node scripts/check-plugin-release.mjs",
+      "npm test",
+      "npm run validate",
+      "git archive",
+      "sha256sum",
+      "contents: write",
+      "gh release create",
+      "--verify-tag"
+    ]) {
+      if (!workflow.includes(required)) errors.push(`plugin publish workflow missing: ${required.replaceAll("\n", " ")}`);
+    }
+    if (/NPM_TOKEN|NODE_AUTH_TOKEN/.test(workflow)) errors.push("plugin publish workflow must not use npm credentials");
   }
 
   if (fs.existsSync(bootstrapWorkflowPath)) {
