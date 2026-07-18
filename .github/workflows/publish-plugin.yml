@@ -1,21 +1,16 @@
-name: Publish Plugin Marketplace
+name: Deploy Plugin Marketplace
 
 on:
   push:
-    tags:
-      - "plugin-v*"
+    branches:
+      - main
   workflow_dispatch:
-    inputs:
-      tag:
-        description: Existing plugin-v tag to publish
-        required: true
-        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: plugin-marketplace-publish
+  group: plugin-marketplace-deploy
   cancel-in-progress: false
 
 jobs:
@@ -24,10 +19,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Check out release source
+      - name: Check out main source
         uses: actions/checkout@v6
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/tags/{0}', inputs.tag) || github.ref }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && 'refs/heads/main' || github.sha }}
+          persist-credentials: false
 
       - name: Set up Node.js
         uses: actions/setup-node@v6
@@ -38,79 +34,40 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Verify plugin release tag
-        run: node scripts/check-plugin-release.mjs
-        env:
-          PLUGIN_RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
-
       - name: Test workspace
         run: npm test
 
       - name: Validate workspace and plugin marketplace
         run: npm run validate
 
-  release:
+  deploy:
     needs: verify
     if: github.repository == 'medeiroshudson/CodexAgent'
     runs-on: ubuntu-latest
-    environment: codex-marketplace
+    environment:
+      name: codex-marketplace
+      url: https://github.com/${{ github.repository }}/tree/marketplace
     timeout-minutes: 10
     permissions:
       contents: write
     steps:
-      - name: Check out verified source
+      - name: Check out verified main source
         uses: actions/checkout@v6
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/tags/{0}', inputs.tag) || github.ref }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && 'refs/heads/main' || github.sha }}
+          fetch-depth: 0
 
-      - name: Build release archive
-        id: package
+      - name: Deploy verified commit to marketplace branch
+        shell: bash
+        run: git push origin "HEAD:refs/heads/marketplace"
+
+      - name: Record deployment summary
         shell: bash
         run: |
-          set -euo pipefail
-          VERSION=$(node -p "require('./plugins/codex-agent/.codex-plugin/plugin.json').version")
-          ASSET_NAME="codex-agent-marketplace-$VERSION.tar.gz"
-          mkdir -p release
-          git archive \
-            --format=tar.gz \
-            --prefix="codex-agent-marketplace-$VERSION/" \
-            --output="release/$ASSET_NAME" \
-            HEAD \
-            .agents/plugins/marketplace.json \
-            plugins/codex-agent \
-            README.md \
-            LICENSE
-          sha256sum "release/$ASSET_NAME" > "release/$ASSET_NAME.sha256"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "asset=release/$ASSET_NAME" >> "$GITHUB_OUTPUT"
-          echo "checksum=release/$ASSET_NAME.sha256" >> "$GITHUB_OUTPUT"
-
-      - name: Check for an existing release
-        id: existing
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
-        run: |
-          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-            echo "Release $RELEASE_TAG already exists; skipping publication."
-          else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Publish GitHub release
-        if: steps.existing.outputs.exists == 'false'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
-          VERSION: ${{ steps.package.outputs.version }}
-          ASSET: ${{ steps.package.outputs.asset }}
-          CHECKSUM: ${{ steps.package.outputs.checksum }}
-        run: >-
-          gh release create "$RELEASE_TAG"
-          "$ASSET#Codex marketplace bundle"
-          "$CHECKSUM#SHA-256 checksum"
-          --verify-tag
-          --title "Codex Agent $VERSION"
-          --generate-notes
+          {
+            echo "### Codex marketplace deployed"
+            echo
+            echo "- Source: \`main\`"
+            echo "- Destination: \`marketplace\`"
+            echo "- Commit: \`$GITHUB_SHA\`"
+          } >> "$GITHUB_STEP_SUMMARY"

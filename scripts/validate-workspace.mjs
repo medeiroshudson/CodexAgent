@@ -123,23 +123,22 @@ export const validateWorkspace = (root = defaultRoot) => {
   if (fs.existsSync(publishPluginWorkflowPath)) {
     const workflow = fs.readFileSync(publishPluginWorkflowPath, "utf8");
     for (const required of [
-      'tags:\n      - "plugin-v*"',
+      'branches:\n      - main',
       "workflow_dispatch:",
-      "Existing plugin-v tag to publish",
-      "format('refs/tags/{0}', inputs.tag)",
+      "Deploy Plugin Marketplace",
+      "'refs/heads/main'",
       'node-version: "24"',
-      "node scripts/check-plugin-release.mjs",
       "npm test",
       "npm run validate",
-      "git archive",
-      "sha256sum",
+      "name: codex-marketplace",
       "contents: write",
-      "gh release create",
-      "--verify-tag"
+      'git push origin "HEAD:refs/heads/marketplace"'
     ]) {
       if (!workflow.includes(required)) errors.push(`plugin publish workflow missing: ${required.replaceAll("\n", " ")}`);
     }
     if (/NPM_TOKEN|NODE_AUTH_TOKEN/.test(workflow)) errors.push("plugin publish workflow must not use npm credentials");
+    if (/^\s+tags:/m.test(workflow)) errors.push("plugin publish workflow must deploy from main instead of tags");
+    if (/plugin-v|check-plugin-release|gh release/.test(workflow)) errors.push("plugin publish workflow contains obsolete tag release behavior");
   }
 
   if (fs.existsSync(bootstrapWorkflowPath)) {

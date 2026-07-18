@@ -29,15 +29,15 @@ python3 /path/to/plugin-creator/scripts/validate_plugin.py plugins/codex-agent
 
 For local iteration, update the plugin cachebuster through the plugin-creator helper and reinstall from `codex-agent-marketplace`. Start a new Codex task after reinstalling.
 
-## Plugin releases
+## Plugin deployments
 
-The plugin marketplace is published from `.github/workflows/publish-plugin.yml`
-when a `plugin-v*` tag is pushed. The tag must exactly match the complete version
-in `plugins/codex-agent/.codex-plugin/plugin.json`, including its Codex
-cachebuster suffix.
+The plugin marketplace is deployed from `.github/workflows/publish-plugin.yml`
+after every push to `main`. The workflow validates the exact source commit and
+then advances the `marketplace` branch consumed by Codex. No release tag is
+required.
 
-See [docs/releasing-plugin.md](docs/releasing-plugin.md) for the versioning,
-validation, tagging, and recovery procedure.
+See [docs/deploying-plugin.md](docs/deploying-plugin.md) for validation,
+deployment, installation, and rollback instructions.
 
 ## CLI releases
 
