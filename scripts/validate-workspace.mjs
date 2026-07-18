@@ -104,6 +104,8 @@ export const validateWorkspace = (root = defaultRoot) => {
     for (const required of [
       'branches:\n      - main',
       'node-version: "24"',
+      "- name: Validate workspace",
+      "- name: Derive commit version",
       "node scripts/derive-cli-version.mjs",
       "--no-git-tag-version",
       "npm run build --workspace @codex-agent/cli",
@@ -115,6 +117,9 @@ export const validateWorkspace = (root = defaultRoot) => {
     if (/^\s+tags:/m.test(workflow)) errors.push("publish workflow must not use Git tags");
     if (workflow.includes("workflow_dispatch:")) errors.push("publish workflow must not expose manual releases");
     if (workflow.includes("id-token: write")) errors.push("publish workflow must not request OIDC permissions");
+    if (workflow.indexOf("- name: Derive commit version") < workflow.indexOf("- name: Validate workspace")) {
+      errors.push("publish workflow must validate the stable base version before deriving the npm version");
+    }
   }
 
   for (const obsolete of [

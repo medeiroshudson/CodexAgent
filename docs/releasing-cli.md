@@ -32,9 +32,9 @@ The workflow exposes the token only to `npm whoami` and `npm publish`. Keep the 
 Merge or push a commit to `main`. The workflow then:
 
 1. Installs locked dependencies.
-2. Derives the commit version.
-3. Builds and tests the CLI.
-4. Validates the workspace.
+2. Builds and tests the CLI using the stable base version committed to `main`.
+3. Validates the workspace.
+4. Derives the immutable commit version in the runner.
 5. Publishes the generated version with the `latest` dist-tag.
 
 Published npm versions are immutable. Re-running a workflow that already completed its publish step will fail because that derived version already exists.

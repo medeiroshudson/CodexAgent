@@ -28,14 +28,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Derive commit version
-        id: version
-        shell: bash
-        run: |
-          VERSION=$(node scripts/derive-cli-version.mjs)
-          npm version "$VERSION" --workspace @codex-agent/cli --no-git-tag-version --allow-same-version
-          echo "value=$VERSION" >> "$GITHUB_OUTPUT"
-
       - name: Build CLI package
         run: npm run build --workspace @codex-agent/cli
 
@@ -44,6 +36,14 @@ jobs:
 
       - name: Validate workspace
         run: npm run validate
+
+      - name: Derive commit version
+        id: version
+        shell: bash
+        run: |
+          VERSION=$(node scripts/derive-cli-version.mjs)
+          npm version "$VERSION" --workspace @codex-agent/cli --no-git-tag-version --allow-same-version
+          echo "value=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Publish commit as latest
         shell: bash
