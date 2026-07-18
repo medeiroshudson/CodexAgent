@@ -1,8 +1,5 @@
-#!/usr/bin/env node
-
 import fs from "node:fs";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
 
 const ANALYSIS_VERSION = 1;
 const IGNORED_DIRECTORIES = new Set([
@@ -512,32 +509,3 @@ export const initializeProject = ({ root, apply = false, refresh = false, force 
     applied: shouldWrite && conflicts.length === 0
   };
 };
-
-const option = (args, name, fallback) => {
-  const index = args.indexOf(name);
-  return index >= 0 && args[index + 1] ? args[index + 1] : fallback;
-};
-
-export const main = (args = process.argv.slice(2)) => {
-  const root = path.resolve(option(args, "--root", process.cwd()));
-  const analysisFile = option(args, "--analysis");
-  const analysis = analysisFile ? readJson(path.resolve(analysisFile)) : null;
-  if (analysisFile && !analysis) throw new Error(`Could not parse analysis file: ${analysisFile}`);
-  const result = initializeProject({
-    root,
-    analysis,
-    apply: args.includes("--apply"),
-    refresh: args.includes("--refresh"),
-    force: args.includes("--force")
-  });
-  process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
-  if (result.conflicts.length) process.exitCode = 2;
-};
-
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  try { main(); }
-  catch (error) {
-    process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
-    process.exitCode = 1;
-  }
-}

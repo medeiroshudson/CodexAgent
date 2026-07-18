@@ -14,13 +14,10 @@ const run = (command, args, options = {}) => spawnSync(command, args, {
 });
 
 test("published tarball runs without the source workspace", () => {
-  const target = fs.mkdtempSync(path.join(os.tmpdir(), "codex-agent-package-"));
+  const target = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "codex-agent-package-")));
   const npmCache = path.join(target, "npm-cache");
-  const sourceBundle = path.join(root, "packages", "codex-agent-cli", "dist", "codex-agent.mjs");
-  if (!fs.existsSync(sourceBundle)) {
-    const built = run("npm", ["run", "build", "--workspace", "@codex-agent/cli"]);
-    assert.equal(built.status, 0, built.stderr || built.stdout);
-  }
+  const built = run("npm", ["run", "build", "--workspace", "@codex-agent/cli"]);
+  assert.equal(built.status, 0, built.stderr || built.stdout);
 
   const packed = run("npm", [
     "pack",
@@ -53,6 +50,7 @@ test("published tarball runs without the source workspace", () => {
   fs.writeFileSync(path.join(fixture, "package.json"), JSON.stringify({ name: "fixture" }));
   const init = run(process.execPath, [executable, "init", "--json"], { cwd: fixture });
   assert.equal(init.status, 0, init.stderr);
-  assert.equal(JSON.parse(init.stdout).mode, "preview");
-  assert.equal(fs.realpathSync(JSON.parse(init.stdout).root), fs.realpathSync(fixture));
+  const result = JSON.parse(init.stdout);
+  assert.equal(result.mode, "preview");
+  assert.equal(fs.realpathSync(result.root), fs.realpathSync(fixture));
 });
