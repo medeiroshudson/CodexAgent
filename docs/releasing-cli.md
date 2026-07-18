@@ -6,16 +6,19 @@ Before entering the protected `npm` environment, the workflow checks whether the
 
 ## One-time npm setup
 
-If `@codex-agent/cli` has never been published, create the package with one manual release before configuring its trusted publisher:
+If `@codex-agent/cli` has never been published, bootstrap it once with `.github/workflows/bootstrap-cli.yml` before configuring its trusted publisher.
 
-```bash
-npm ci
-npm run build --workspace @codex-agent/cli
-npm test
-npm run validate
-npm login
-npm publish --workspace @codex-agent/cli --access public
-```
+1. Create a granular npm access token with permission to publish packages in the `@codex-agent` scope. The token must satisfy the scope's 2FA policy for non-interactive publishing.
+2. Open **GitHub → Settings → Environments → npm → Environment secrets**.
+3. Add the token as a secret named `NPM_TOKEN`.
+4. Open **GitHub → Actions → Bootstrap CLI package → Run workflow**.
+5. Select the ref containing the release and enter the exact confirmation requested by the workflow, such as `@codex-agent/cli@0.1.0`.
+
+The bootstrap workflow validates the confirmation, authenticates with `npm whoami`, builds and tests the package, and publishes with `NODE_AUTH_TOKEN`. It has only `contents: read` GitHub permission and cannot request an OIDC token.
+
+The authenticated npm account must own the `@codex-agent` scope or be a member of that npm organization with publish permission. If that scope is not under your control, create the npm organization first or rename the package to a scope you own, such as `@medeiroshudson/codex-agent-cli`.
+
+OIDC cannot bootstrap a package that does not exist yet. Until the token-based bootstrap succeeds, automated runs stop before the protected publish job with an explicit setup error.
 
 Then open the package settings on npmjs.com and add a GitHub Actions trusted publisher with these exact values:
 
@@ -25,7 +28,9 @@ Then open the package settings on npmjs.com and add a GitHub Actions trusted pub
 - Environment name: `npm`
 - Allowed action: `npm publish`
 
-The workflow requires `id-token: write` and uses a GitHub-hosted runner. Do not add an `NPM_TOKEN` secret. The `repository.url` field in the package manifest must continue to match `https://github.com/medeiroshudson/CodexAgent.git`.
+The permanent workflow requires `id-token: write` and uses a GitHub-hosted runner. It never reads `NPM_TOKEN`; the token is isolated to the manual bootstrap workflow. The `repository.url` field in the package manifest must continue to match `https://github.com/medeiroshudson/CodexAgent.git`.
+
+After the first publish, configure Trusted Publishing, revoke the npm token, and delete the `NPM_TOKEN` environment secret. Future releases use only OIDC.
 
 ## Publish a version
 

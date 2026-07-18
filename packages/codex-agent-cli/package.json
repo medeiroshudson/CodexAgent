@@ -4,7 +4,7 @@
   "description": "Diagnostics and project bootstrap helpers for the codex-agent plugin.",
   "type": "module",
   "bin": {
-    "codex-agent": "./dist/codex-agent.mjs"
+    "codex-agent": "dist/codex-agent.mjs"
   },
   "scripts": {
     "build": "node scripts/build.mjs",

@@ -40,6 +40,9 @@ test("published tarball runs without the source workspace", () => {
   const extracted = run("tar", ["-xzf", archive, "-C", target]);
   assert.equal(extracted.status, 0, extracted.stderr);
 
+  const packedManifest = JSON.parse(fs.readFileSync(path.join(target, "package", "package.json"), "utf8"));
+  assert.equal(packedManifest.bin["codex-agent"], "dist/codex-agent.mjs");
+
   const executable = path.join(target, "package", "dist", "codex-agent.mjs");
   const help = run(process.execPath, [executable, "help"], { cwd: target });
   assert.equal(help.status, 0, help.stderr);
