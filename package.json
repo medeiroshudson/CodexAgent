@@ -9,12 +9,9 @@
   "scripts": {
     "test": "node --test packages/codex-agent-cli/test/*.test.mjs tests/*.test.mjs",
     "validate": "node scripts/validate-workspace.mjs",
-    "doctor": "node packages/codex-agent-cli/bin/codex-agent.mjs doctor",
-    "context:index": "node packages/codex-agent-cli/bin/codex-agent.mjs context index",
     "eval": "node evals/run-evals.mjs"
   },
   "engines": {
     "node": ">=20"
   }
 }
-

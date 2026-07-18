@@ -55,6 +55,9 @@ export const validateWorkspace = (root = defaultRoot) => {
   const manifestPath = requireFile("plugins/codex-agent/.codex-plugin/plugin.json");
   const marketplacePath = requireFile(".agents/plugins/marketplace.json");
   const indexPath = requireFile(".agents/context/index.json");
+  const cliManifestPath = requireFile("packages/codex-agent-cli/package.json");
+  const publishWorkflowPath = requireFile(".github/workflows/publish-cli.yml");
+  requireFile("package-lock.json");
   requireFile("plugins/codex-agent/hooks/hooks.json");
 
   const manifest = fs.existsSync(manifestPath) ? parseJson(manifestPath, errors) : null;
@@ -77,6 +80,33 @@ export const validateWorkspace = (root = defaultRoot) => {
   else {
     if (entry.source?.path !== "./plugins/codex-agent") errors.push("marketplace source.path must be ./plugins/codex-agent");
     if (!entry.policy?.installation || !entry.policy?.authentication || !entry.category) errors.push("marketplace entry missing policy or category");
+  }
+
+  const cliManifest = fs.existsSync(cliManifestPath) ? parseJson(cliManifestPath, errors) : null;
+  if (cliManifest) {
+    if (cliManifest.name !== "@codex-agent/cli") errors.push("CLI package name must be @codex-agent/cli");
+    if (cliManifest.bin?.["codex-agent"] !== "./dist/codex-agent.mjs") errors.push("CLI package bin must target ./dist/codex-agent.mjs");
+    if (!cliManifest.files?.includes("dist/")) errors.push("CLI package must publish dist/");
+    if (cliManifest.scripts?.prepare) errors.push("CLI package must not build automatically during local install");
+    if (cliManifest.publishConfig?.access !== "public") errors.push("CLI package must publish with public access");
+    if (cliManifest.repository?.url !== "git+https://github.com/medeiroshudson/CodexAgent.git") {
+      errors.push("CLI package repository.url must match the public GitHub repository");
+    }
+  }
+
+  if (fs.existsSync(publishWorkflowPath)) {
+    const workflow = fs.readFileSync(publishWorkflowPath, "utf8");
+    for (const required of [
+      'tags:\n      - "cli-v*"',
+      "id-token: write",
+      'node-version: "24"',
+      "node scripts/check-cli-release.mjs",
+      "npm run build --workspace @codex-agent/cli",
+      "npm publish --workspace @codex-agent/cli --access public"
+    ]) {
+      if (!workflow.includes(required)) errors.push(`publish workflow missing: ${required.replaceAll("\n", " ")}`);
+    }
+    if (/NPM_TOKEN|NODE_AUTH_TOKEN/.test(workflow)) errors.push("publish workflow must use OIDC instead of an npm token");
   }
 
   const contextIndex = fs.existsSync(indexPath) ? parseJson(indexPath, errors) : null;

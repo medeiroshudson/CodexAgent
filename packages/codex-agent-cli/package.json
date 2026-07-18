@@ -4,18 +4,32 @@
   "description": "Diagnostics and project bootstrap helpers for the codex-agent plugin.",
   "type": "module",
   "bin": {
-    "codex-agent": "./bin/codex-agent.mjs"
+    "codex-agent": "./dist/codex-agent.mjs"
   },
   "scripts": {
+    "build": "node scripts/build.mjs",
     "test": "node --test test/*.test.mjs"
   },
   "files": [
-    "bin/",
-    "src/"
+    "dist/"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/medeiroshudson/CodexAgent.git",
+    "directory": "packages/codex-agent-cli"
+  },
+  "homepage": "https://github.com/medeiroshudson/CodexAgent#readme",
+  "bugs": {
+    "url": "https://github.com/medeiroshudson/CodexAgent/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "engines": {
     "node": ">=20"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "esbuild": "^0.28.1"
+  }
 }
-

@@ -33,16 +33,16 @@ Start a new Codex task after installation so the plugin surfaces are loaded clea
 
 In a new Codex task opened at the target repository, run `/init` or ask Codex to “use `$project-init` to initialize this repository.” The skill performs read-only context discovery, presents the evidence-backed preview, and requests approval before applying it.
 
-For direct CLI use from this source checkout, analyze the repository and preview the proposed files first (this never writes):
+For direct CLI use, open a terminal in the target repository and run the published package with `npx`. Analyze the repository and preview the proposed files first (this never writes):
 
 ```bash
-node packages/codex-agent-cli/bin/codex-agent.mjs init --root /path/to/project --json
+npx --yes @codex-agent/cli@latest init --json
 ```
 
 After reviewing the evidence, confidence, unknowns, and diff, apply the generated setup:
 
 ```bash
-node packages/codex-agent-cli/bin/codex-agent.mjs init --root /path/to/project --apply
+npx --yes @codex-agent/cli@latest init --apply
 ```
 
 The initializer discovers the actual package manager, repository commands, languages, frameworks, modules, entrypoints, test setup, CI/CD, security-sensitive paths, and repeated conventions. Every fact in `.codex-agent/analysis.json` carries repository evidence, confidence, and a `detected`, `inferred`, or `unknown` status. Unknown facts are not rendered as placeholders.
@@ -52,7 +52,7 @@ Manual Markdown outside `codex-agent:managed` markers and custom context-index e
 Refresh an existing managed setup after commands or architecture change:
 
 ```bash
-node packages/codex-agent-cli/bin/codex-agent.mjs init --root /path/to/project --refresh
+npx --yes @codex-agent/cli@latest init --refresh
 ```
 
 Initialization is optional. Installing the plugin makes its skills available in a new Codex task even when the project has not been initialized. The generated files improve automatic repository guidance and add project agent profiles; they are not a prerequisite for skill routing.
@@ -91,15 +91,14 @@ Files under `.agents/context/` are not automatically injected into every task. T
 Rebuild the index after adding context:
 
 ```bash
-node packages/codex-agent-cli/bin/codex-agent.mjs context index --root /path/to/project
+npx --yes @codex-agent/cli@latest context index
 ```
 
 Import Markdown context from another local knowledge directory without translating its runtime-specific agents or commands:
 
 ```bash
-node packages/codex-agent-cli/bin/codex-agent.mjs migrate \
+npx --yes @codex-agent/cli@latest migrate \
   --from /path/to/legacy-context \
-  --root /path/to/project \
   --dry-run
 ```
 
@@ -122,14 +121,14 @@ Hooks reinforce workflow discipline but are not a security boundary. Use Codex s
 ## Diagnose and validate
 
 ```bash
-node packages/codex-agent-cli/bin/codex-agent.mjs doctor --root . --json
-node packages/codex-agent-cli/bin/codex-agent.mjs eval --root . --json
+npx --yes @codex-agent/cli@latest doctor --json
+npx --yes @codex-agent/cli@latest eval --json
 npm test
 npm run validate
 npm run eval
 ```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for plugin and skill validation commands.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for plugin and skill validation commands and [docs/releasing-cli.md](docs/releasing-cli.md) for the npm release process.
 
 ## Architecture
 
