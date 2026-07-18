@@ -1,21 +1,14 @@
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import {
+  analyzeProject,
+  initializeProject,
+  renderProjectFiles,
+  validateAnalysisEvidence,
+  validateProjectAnalysis
+} from "../../../plugins/codex-agent/skills/project-init/scripts/project-init.mjs";
 
-const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const workspaceRoot = path.resolve(packageRoot, "../..");
-
-export const resolveTemplateRoot = () => {
-  const candidates = [
-    process.env.CODEX_AGENT_TEMPLATE_ROOT,
-    path.join(packageRoot, "templates", "project"),
-    path.join(workspaceRoot, "templates", "project")
-  ].filter(Boolean);
-
-  const match = candidates.find((candidate) => fs.existsSync(candidate));
-  if (!match) throw new Error("Could not find Codex Agent project templates.");
-  return path.resolve(match);
-};
+export { analyzeProject, initializeProject, renderProjectFiles, validateAnalysisEvidence, validateProjectAnalysis };
 
 export const listFiles = (root) => {
   if (!fs.existsSync(root)) return [];
@@ -32,49 +25,6 @@ export const listFiles = (root) => {
 };
 
 const timestamp = () => new Date().toISOString().replace(/[:.]/g, "-");
-
-export const initializeProject = ({ root, templateRoot = resolveTemplateRoot(), dryRun = false, force = false }) => {
-  const projectRoot = path.resolve(root);
-  const backupRoot = path.join(projectRoot, ".codex-agent", "backups", timestamp());
-  const result = { created: [], unchanged: [], conflicts: [], backedUp: [], dryRun };
-
-  for (const source of listFiles(templateRoot)) {
-    const relative = path.relative(templateRoot, source);
-    const destination = path.join(projectRoot, relative);
-    const sourceContent = fs.readFileSync(source);
-
-    if (!fs.existsSync(destination)) {
-      result.created.push(relative);
-      if (!dryRun) {
-        fs.mkdirSync(path.dirname(destination), { recursive: true });
-        fs.writeFileSync(destination, sourceContent);
-      }
-      continue;
-    }
-
-    const destinationContent = fs.readFileSync(destination);
-    if (sourceContent.equals(destinationContent)) {
-      result.unchanged.push(relative);
-      continue;
-    }
-
-    if (!force) {
-      result.conflicts.push(relative);
-      continue;
-    }
-
-    const backup = path.join(backupRoot, relative);
-    result.backedUp.push(path.relative(projectRoot, backup));
-    result.created.push(relative);
-    if (!dryRun) {
-      fs.mkdirSync(path.dirname(backup), { recursive: true });
-      fs.copyFileSync(destination, backup);
-      fs.writeFileSync(destination, sourceContent);
-    }
-  }
-
-  return result;
-};
 
 export const migrateContext = ({ root, source, dryRun = false, force = false }) => {
   if (!source) throw new Error("migrate requires --from PATH");
@@ -254,7 +204,7 @@ export const diagnoseProject = ({ root }) => {
   if (isSourceWorkspace) {
     const skillsRoot = path.join(projectRoot, "plugins", "codex-agent", "skills");
     const skillFiles = listFiles(skillsRoot).filter((file) => file.endsWith(`${path.sep}SKILL.md`));
-    check(checks, "skills", skillFiles.length >= 8, `${skillFiles.length} skills`);
+    check(checks, "skills", skillFiles.length >= 9, `${skillFiles.length} skills`);
 
     const agentRoot = path.join(projectRoot, "plugins", "codex-agent", "agents");
     check(checks, "plugin-agents", listFiles(agentRoot).filter((file) => file.endsWith(".md")).length >= 6, agentRoot);

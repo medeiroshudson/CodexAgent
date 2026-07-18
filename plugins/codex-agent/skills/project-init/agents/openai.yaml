@@ -1,0 +1,4 @@
+interface:
+  display_name: "Project Init"
+  short_description: "Analyze and bootstrap project guidance"
+  default_prompt: "Use $project-init to analyze and initialize this repository."

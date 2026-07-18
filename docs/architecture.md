@@ -11,7 +11,9 @@
 | `.codex/agents/` templates | Project-specific sandbox and subagent configuration |
 | `commands/` | Thin user entrypoints |
 | `hooks/` | Trusted deterministic lifecycle reminders |
-| `packages/codex-agent-cli/` | Safe bootstrap, diagnosis, and context indexing |
+| `project-init` skill | Discovery orchestration, evidence review, preview, and approval gate |
+| `project-init/scripts/project-init.mjs` | Deterministic analysis, validation, rendering, merge, backup, and apply |
+| `packages/codex-agent-cli/` | Thin CLI for initialization, diagnosis, migration, and context indexing |
 | `evals/` | Routing contracts and behavioral benchmark inputs |
 
 ## Execution flow
@@ -29,3 +31,17 @@
 
 Installed plugin files are treated as immutable. Project configuration belongs in the project, and optional plugin runtime state belongs under `PLUGIN_DATA`. The CLI stores overwrite backups under `.codex-agent/backups/` in the target project.
 
+## Project initialization
+
+Initialization is optional and uses a two-layer pipeline:
+
+```text
+$project-init
+  -> $context-discovery (read-only repository evidence)
+  -> project analysis (detected, inferred, unknown)
+  -> deterministic validation and rendering
+  -> preview and diff
+  -> explicit apply or refresh
+```
+
+The intermediate `.codex-agent/analysis.json` records evidence and confidence. Generated Markdown and TOML use managed markers so refresh can preserve manual content. Existing unmarked TOML is treated as a conflict; forced replacement creates a backup first.

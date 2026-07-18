@@ -94,7 +94,7 @@ export const validateWorkspace = (root = defaultRoot) => {
   const skillDirectories = fs.existsSync(skillsRoot)
     ? fs.readdirSync(skillsRoot, { withFileTypes: true }).filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort()
     : [];
-  if (skillDirectories.length !== 8) errors.push(`expected 8 skills, found ${skillDirectories.length}`);
+  if (skillDirectories.length !== 9) errors.push(`expected 9 skills, found ${skillDirectories.length}`);
   for (const skill of skillDirectories) {
     const skillFile = path.join(skillsRoot, skill, "SKILL.md");
     const metadataFile = path.join(skillsRoot, skill, "agents", "openai.yaml");
@@ -120,7 +120,7 @@ export const validateWorkspace = (root = defaultRoot) => {
   const agentCount = listFiles(path.join(workspace, "plugins", "codex-agent", "agents")).filter((file) => file.endsWith(".md")).length;
   const commandCount = listFiles(path.join(workspace, "plugins", "codex-agent", "commands")).filter((file) => file.endsWith(".md")).length;
   if (agentCount !== 6) errors.push(`expected 6 plugin agents, found ${agentCount}`);
-  if (commandCount !== 5) errors.push(`expected 5 commands, found ${commandCount}`);
+  if (commandCount !== 6) errors.push(`expected 6 commands, found ${commandCount}`);
 
   const predecessorName = ["Open", "Agents", "Control"].join("");
   const predecessorInitialisms = [["O", "A", "C"].join(""), ["A", "O", "C"].join("")];

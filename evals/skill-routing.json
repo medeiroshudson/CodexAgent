@@ -40,7 +40,11 @@
       "id": "verify-completion",
       "prompt": "Before you say this change is done, run proportional checks and report fresh evidence.",
       "expectedSkill": "verification-before-completion"
+    },
+    {
+      "id": "initialize-project",
+      "prompt": "Analyze this existing repository and preview project-specific Codex guidance before creating any files.",
+      "expectedSkill": "project-init"
     }
   ]
 }
-

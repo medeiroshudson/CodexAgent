@@ -31,19 +31,31 @@ Start a new Codex task after installation so the plugin surfaces are loaded clea
 
 ## Initialize a project
 
-Preview the files first:
+In a new Codex task opened at the target repository, run `/init` or ask Codex to “use `$project-init` to initialize this repository.” The skill performs read-only context discovery, presents the evidence-backed preview, and requests approval before applying it.
+
+For direct CLI use from this source checkout, analyze the repository and preview the proposed files first (this never writes):
 
 ```bash
-node packages/codex-agent-cli/bin/codex-agent.mjs init --root /path/to/project --dry-run --json
+node packages/codex-agent-cli/bin/codex-agent.mjs init --root /path/to/project --json
 ```
 
-Apply non-conflicting templates:
+After reviewing the evidence, confidence, unknowns, and diff, apply the generated setup:
 
 ```bash
-node packages/codex-agent-cli/bin/codex-agent.mjs init --root /path/to/project
+node packages/codex-agent-cli/bin/codex-agent.mjs init --root /path/to/project --apply
 ```
 
-Existing differing files are preserved. `--force` backs them up under `.codex-agent/backups/` before replacement.
+The initializer discovers the actual package manager, repository commands, languages, frameworks, modules, entrypoints, test setup, CI/CD, security-sensitive paths, and repeated conventions. Every fact in `.codex-agent/analysis.json` carries repository evidence, confidence, and a `detected`, `inferred`, or `unknown` status. Unknown facts are not rendered as placeholders.
+
+Manual Markdown outside `codex-agent:managed` markers and custom context-index entries are preserved. Existing TOML without managed markers is reported as a conflict because blind merging could create duplicate keys. Review such files before using `--force`; forced replacements are backed up under `.codex-agent/backups/`.
+
+Refresh an existing managed setup after commands or architecture change:
+
+```bash
+node packages/codex-agent-cli/bin/codex-agent.mjs init --root /path/to/project --refresh
+```
+
+Initialization is optional. Installing the plugin makes its skills available in a new Codex task even when the project has not been initialized. The generated files improve automatic repository guidance and add project agent profiles; they are not a prerequisite for skill routing.
 
 The generated project structure includes:
 
@@ -54,7 +66,7 @@ AGENTS.md
 .codex/agents/
 ```
 
-Edit the generated guidance and context files to match the project. Do not leave the generic commands and conventions unchanged.
+The `$project-init` workflow runs `$context-discovery` before the deterministic analyzer so Codex can review existing guidance and supplement the intermediate analysis with evidence-backed facts. The script remains responsible for validation, rendering, merge, backups, preview, and apply.
 
 ## Workflows
 
@@ -68,8 +80,9 @@ Invoke skills explicitly with `$` or use natural requests that match their descr
 - `$code-review`
 - `$external-research`
 - `$verification-before-completion`
+- `$project-init`
 
-Commands provide short entrypoints: `/plan`, `/context`, `/review`, `/test`, and `/doctor`.
+Commands provide short entrypoints: `/init`, `/plan`, `/context`, `/review`, `/test`, and `/doctor`.
 
 ## Context model
 

@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "project-analysis.schema.json",
+  "title": "Codex Agent project analysis",
+  "type": "object",
+  "required": [
+    "version", "root", "project", "packageManager", "languages", "frameworks",
+    "commands", "modules", "entrypoints", "conventions", "security", "testing",
+    "ciCd", "existingGuidance"
+  ],
+  "properties": {
+    "version": { "const": 1 },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "root": { "type": "string", "minLength": 1 },
+    "project": { "$ref": "#/$defs/signal" },
+    "packageManager": { "$ref": "#/$defs/signal" },
+    "languages": { "$ref": "#/$defs/signal" },
+    "frameworks": { "$ref": "#/$defs/signal" },
+    "commands": { "$ref": "#/$defs/signal" },
+    "modules": { "$ref": "#/$defs/signal" },
+    "entrypoints": { "$ref": "#/$defs/signal" },
+    "conventions": { "$ref": "#/$defs/conventions" },
+    "security": { "$ref": "#/$defs/signal" },
+    "testing": { "$ref": "#/$defs/signal" },
+    "ciCd": { "$ref": "#/$defs/signal" },
+    "existingGuidance": { "$ref": "#/$defs/signal" }
+  },
+  "$defs": {
+    "conventions": {
+      "type": "object",
+      "required": ["sourceLayout", "fileNaming", "boundaries"],
+      "properties": {
+        "sourceLayout": { "$ref": "#/$defs/signal" },
+        "fileNaming": { "$ref": "#/$defs/signal" },
+        "boundaries": {
+          "type": "object",
+          "required": ["api", "ui", "persistence"],
+          "properties": {
+            "api": { "$ref": "#/$defs/signal" },
+            "ui": { "$ref": "#/$defs/signal" },
+            "persistence": { "$ref": "#/$defs/signal" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "signal": {
+      "type": "object",
+      "required": ["value", "evidence", "confidence", "status"],
+      "properties": {
+        "value": {},
+        "evidence": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "confidence": { "enum": ["high", "medium", "low", "unknown"] },
+        "status": { "enum": ["detected", "inferred", "unknown"] }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": true
+}
