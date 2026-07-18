@@ -58,7 +58,6 @@ export const validateWorkspace = (root = defaultRoot) => {
   const contextProposalSchemaPath = requireFile("schemas/context-proposal.schema.json");
   const cliManifestPath = requireFile("packages/codex-agent-cli/package.json");
   const publishWorkflowPath = requireFile(".github/workflows/publish-cli.yml");
-  const publishPluginWorkflowPath = requireFile(".github/workflows/publish-plugin.yml");
   const bootstrapWorkflowPath = requireFile(".github/workflows/bootstrap-cli.yml");
   requireFile("package-lock.json");
   requireFile("plugins/codex-agent/hooks/hooks.json");
@@ -118,27 +117,6 @@ export const validateWorkspace = (root = defaultRoot) => {
       if (!workflow.includes(required)) errors.push(`publish workflow missing: ${required.replaceAll("\n", " ")}`);
     }
     if (/NPM_TOKEN|NODE_AUTH_TOKEN/.test(workflow)) errors.push("publish workflow must use OIDC instead of an npm token");
-  }
-
-  if (fs.existsSync(publishPluginWorkflowPath)) {
-    const workflow = fs.readFileSync(publishPluginWorkflowPath, "utf8");
-    for (const required of [
-      'branches:\n      - main',
-      "workflow_dispatch:",
-      "Deploy Plugin Marketplace",
-      "'refs/heads/main'",
-      'node-version: "24"',
-      "npm test",
-      "npm run validate",
-      "name: codex-marketplace",
-      "contents: write",
-      'git push origin "HEAD:refs/heads/marketplace"'
-    ]) {
-      if (!workflow.includes(required)) errors.push(`plugin publish workflow missing: ${required.replaceAll("\n", " ")}`);
-    }
-    if (/NPM_TOKEN|NODE_AUTH_TOKEN/.test(workflow)) errors.push("plugin publish workflow must not use npm credentials");
-    if (/^\s+tags:/m.test(workflow)) errors.push("plugin publish workflow must deploy from main instead of tags");
-    if (/plugin-v|check-plugin-release|gh release/.test(workflow)) errors.push("plugin publish workflow contains obsolete tag release behavior");
   }
 
   if (fs.existsSync(bootstrapWorkflowPath)) {
