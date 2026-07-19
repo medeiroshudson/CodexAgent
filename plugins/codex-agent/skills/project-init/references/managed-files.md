@@ -17,4 +17,6 @@ Markdown uses HTML managed markers; TOML uses comment markers. Refresh replaces 
 
 Entries created by `$context-curation` use non-managed IDs and category directories, so project refresh preserves them.
 
+Agent TOML files are generated from canonical Markdown under `plugins/codex-agent/agents/`. The checked-in project templates and embedded CLI module are generated artifacts and must remain byte-synchronized with those sources. Run `npm run agents:sync` after editing an agent prompt and `npm run agents:check` during verification.
+
 Existing TOML without matching markers is a conflict because merging duplicate TOML keys could silently change behavior. `--force` replaces that file only after writing a backup. Malformed or one-sided managed markers are also conflicts.

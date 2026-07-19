@@ -1,4 +1,4 @@
 interface:
   display_name: "Verify Completion"
-  short_description: "Prove completion with proportional validation"
-  default_prompt: "Use $verification-before-completion to validate this task before declaring it complete."
+  short_description: "Map acceptance criteria to fresh evidence"
+  default_prompt: "Use $verification-before-completion to inspect the integrated state and map every acceptance criterion to fresh proportional evidence before completion."

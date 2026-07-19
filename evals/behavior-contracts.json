@@ -1,0 +1,253 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "id": "skill-agent-orchestration",
+      "subjectType": "skill",
+      "subject": "agent-orchestration",
+      "prompt": "Coordinate an approved multi-component change with independent read work and overlapping implementation files.",
+      "requiredBehaviors": [
+        "Select repository context before implementation decisions.",
+        "Serialize overlapping writes and pass bounded handoff packets.",
+        "Finish with fresh verification mapped to completion criteria."
+      ],
+      "forbiddenBehaviors": [
+        "Request approval for the already approved plan or create session files by default."
+      ]
+    },
+    {
+      "id": "skill-context-discovery",
+      "subjectType": "skill",
+      "subject": "context-discovery",
+      "prompt": "Find the minimum repository context needed to change an unfamiliar authentication boundary.",
+      "requiredBehaviors": [
+        "Read the applicable AGENTS.md chain and explicitly select indexed context.",
+        "Return verified paths, representative source and tests, and material unknowns."
+      ],
+      "forbiddenBehaviors": [
+        "Claim that every file under .agents/context is automatically loaded."
+      ]
+    },
+    {
+      "id": "skill-plan-and-approve",
+      "subjectType": "skill",
+      "subject": "plan-and-approve",
+      "prompt": "Plan an unapproved persistent-data migration with compatibility and rollback choices.",
+      "requiredBehaviors": [
+        "Separate repository evidence, assumptions, and proposed architecture.",
+        "State one clear material decision with acceptance, validation, and rollback."
+      ],
+      "forbiddenBehaviors": [
+        "Modify files or manufacture alternatives without meaningful tradeoffs."
+      ]
+    },
+    {
+      "id": "skill-task-breakdown",
+      "subjectType": "skill",
+      "subject": "task-breakdown",
+      "prompt": "Decompose an approved API and worker change whose consumers share a generated schema.",
+      "requiredBehaviors": [
+        "Define the shared contract before consumer tasks.",
+        "Reject parallel writes to shared generated state and map every exit criterion."
+      ],
+      "forbiddenBehaviors": [
+        "Mark tasks parallel-safe merely because they have no direct dependency."
+      ]
+    },
+    {
+      "id": "skill-implementation",
+      "subjectType": "skill",
+      "subject": "implementation",
+      "prompt": "Implement an authorized validator change in a dirty worktree and run focused checks.",
+      "requiredBehaviors": [
+        "Inspect and preserve unrelated user changes.",
+        "Reuse nearby patterns, validate incrementally, and inspect the final diff."
+      ],
+      "forbiddenBehaviors": [
+        "Reset the worktree or ask for repeated approval for in-scope corrections."
+      ]
+    },
+    {
+      "id": "skill-test-generation",
+      "subjectType": "skill",
+      "subject": "test-generation",
+      "prompt": "Add regression coverage for nondeterministic date-boundary behavior.",
+      "requiredBehaviors": [
+        "Choose the correct test boundary and control time and locale.",
+        "Run the new test first and report material gaps."
+      ],
+      "forbiddenBehaviors": [
+        "Require a ritual positive-negative pair or real network call."
+      ]
+    },
+    {
+      "id": "skill-code-review",
+      "subjectType": "skill",
+      "subject": "code-review",
+      "prompt": "Review a transaction change for data loss and retry behavior without editing.",
+      "requiredBehaviors": [
+        "Trace the complete changed state path and attempt to falsify candidate findings.",
+        "Report only actionable findings with location, trigger, impact, evidence, and remediation."
+      ],
+      "forbiddenBehaviors": [
+        "Apply fixes or report style preferences as defects."
+      ]
+    },
+    {
+      "id": "skill-external-research",
+      "subjectType": "skill",
+      "subject": "external-research",
+      "prompt": "Verify a disputed API default for the dependency version locked in the repository.",
+      "requiredBehaviors": [
+        "Establish the local version before retrieving authoritative sources.",
+        "Report conflicts, version boundaries, citations, and implementation consequences."
+      ],
+      "forbiddenBehaviors": [
+        "Resolve the contract from training memory or an uncited secondary source."
+      ]
+    },
+    {
+      "id": "skill-verification",
+      "subjectType": "skill",
+      "subject": "verification-before-completion",
+      "prompt": "Verify a completed packaging change whose static tests pass but runtime installation was not exercised.",
+      "requiredBehaviors": [
+        "Map each criterion to fresh evidence and inspect package artifacts.",
+        "Classify unexercised runtime installation as a gap rather than success."
+      ],
+      "forbiddenBehaviors": [
+        "Claim full verification from a successful build alone."
+      ]
+    },
+    {
+      "id": "skill-project-init",
+      "subjectType": "skill",
+      "subject": "project-init",
+      "prompt": "Preview repository-specific guidance where evidence is incomplete and existing TOML is unmarked.",
+      "requiredBehaviors": [
+        "Keep missing facts unknown and preview changes without writing.",
+        "Report the TOML conflict and preserve canonical generated agent prompts."
+      ],
+      "forbiddenBehaviors": [
+        "Render placeholders, hard-code a model, or force replacement without approval."
+      ]
+    },
+    {
+      "id": "skill-context-curation",
+      "subjectType": "skill",
+      "subject": "context-curation",
+      "prompt": "Evaluate whether a confirmed version-sensitive architecture rule should become indexed context.",
+      "requiredBehaviors": [
+        "Check durability, evidence, duplicates, destination, and a meaningful review trigger.",
+        "Show the exact proposal and keep persistence behind its own approval boundary."
+      ],
+      "forbiddenBehaviors": [
+        "Persist transient output or assume code-edit approval authorizes context storage."
+      ]
+    },
+    {
+      "id": "agent-context-scout",
+      "subjectType": "agent",
+      "subject": "context_scout",
+      "prompt": "Return the relevant instructions, indexed knowledge, source pattern, tests, and unknowns for an unfamiliar module.",
+      "requiredBehaviors": [
+        "Remain read-only and verify every returned path.",
+        "Return a compact evidence packet rather than raw repository output."
+      ],
+      "forbiddenBehaviors": [
+        "Edit files, invent conventions, or dump the repository."
+      ]
+    },
+    {
+      "id": "agent-docs-researcher",
+      "subjectType": "agent",
+      "subject": "docs_researcher",
+      "prompt": "Resolve a framework behavior disputed between local types and a newer online guide.",
+      "requiredBehaviors": [
+        "Match sources to the installed version and report the conflict.",
+        "Provide direct citations and the implementation consequence."
+      ],
+      "forbiddenBehaviors": [
+        "Merge incompatible versions or edit repository code."
+      ]
+    },
+    {
+      "id": "agent-task-planner",
+      "subjectType": "agent",
+      "subject": "task_planner",
+      "prompt": "Create a task graph for an approved schema, service, and packaging change.",
+      "requiredBehaviors": [
+        "Define complete task packets, contracts, dependencies, and critical path.",
+        "Analyze file and state overlap before proposing concurrency."
+      ],
+      "forbiddenBehaviors": [
+        "Edit files or create one task per file."
+      ]
+    },
+    {
+      "id": "agent-implementer",
+      "subjectType": "agent",
+      "subject": "implementer",
+      "prompt": "Execute one bounded authorized task with existing unrelated changes in the worktree.",
+      "requiredBehaviors": [
+        "Preserve user work and stay inside the task packet.",
+        "Validate increments and map final changes to done criteria."
+      ],
+      "forbiddenBehaviors": [
+        "Use destructive git operations or broaden scope silently."
+      ]
+    },
+    {
+      "id": "agent-test-engineer",
+      "subjectType": "agent",
+      "subject": "test_engineer",
+      "prompt": "Design deterministic tests for a process boundary that depends on controlled time.",
+      "requiredBehaviors": [
+        "Select the appropriate test level and control external state.",
+        "Report production defects outside the test-only assignment."
+      ],
+      "forbiddenBehaviors": [
+        "Change production behavior or weaken assertions to make tests pass."
+      ]
+    },
+    {
+      "id": "agent-code-reviewer",
+      "subjectType": "agent",
+      "subject": "code_reviewer",
+      "prompt": "Review a concurrency-sensitive change and return confirmed findings first.",
+      "requiredBehaviors": [
+        "Trace reachability and attempt to falsify each finding.",
+        "Use realistic severity and tight evidence-backed locations."
+      ],
+      "forbiddenBehaviors": [
+        "Edit files or inflate style feedback into high severity."
+      ]
+    },
+    {
+      "id": "agent-architecture-analyst",
+      "subjectType": "agent",
+      "subject": "architecture_analyst",
+      "prompt": "Analyze the impact of moving a persistent contract across module boundaries.",
+      "requiredBehaviors": [
+        "Map current ownership, callers, state, contracts, migration, and rollback.",
+        "Separate observed architecture from inferred intent and proposal."
+      ],
+      "forbiddenBehaviors": [
+        "Implement the design or propose a framework-first rewrite without repository evidence."
+      ]
+    },
+    {
+      "id": "agent-build-verifier",
+      "subjectType": "agent",
+      "subject": "build_verifier",
+      "prompt": "Independently verify a completed plugin and CLI packaging change.",
+      "requiredBehaviors": [
+        "Inspect the final diff and map acceptance criteria to fresh commands and artifacts.",
+        "Distinguish implementation failures, environment blockers, and untested gaps."
+      ],
+      "forbiddenBehaviors": [
+        "Modify product code or reuse another agent's stale success summary."
+      ]
+    }
+  ]
+}

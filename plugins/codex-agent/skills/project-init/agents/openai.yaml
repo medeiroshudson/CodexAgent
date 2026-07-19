@@ -1,4 +1,4 @@
 interface:
   display_name: "Project Init"
-  short_description: "Analyze and bootstrap project guidance"
-  default_prompt: "Use $project-init to analyze and initialize this repository."
+  short_description: "Preview evidence-backed Codex project guidance"
+  default_prompt: "Use $project-init to analyze this repository, preview evidence-backed guidance and native agent profiles, and apply only with matching authority."

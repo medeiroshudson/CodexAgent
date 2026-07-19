@@ -2,15 +2,18 @@
 
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { evaluateRouting } from "../packages/codex-agent-cli/src/core.mjs";
+import { evaluateBehaviorContracts, evaluateRouting } from "../packages/codex-agent-cli/src/core.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const result = evaluateRouting({ root });
+const routing = evaluateRouting({ root });
+const behavior = evaluateBehaviorContracts({ root });
+const failures = [...routing.failures, ...behavior.failures];
 
-if (!result.ok) {
-  for (const failure of result.failures) process.stderr.write(`error: ${failure}\n`);
+if (failures.length) {
+  for (const failure of failures) process.stderr.write(`error: ${failure}\n`);
   process.exitCode = 1;
 } else {
-  process.stdout.write(`Validated ${result.scenarios} routing scenarios across ${result.skills} skills.\n`);
-  process.stdout.write("Use the official plugin-eval benchmark flow for model-based activation and token measurements.\n");
+  process.stdout.write(`Validated ${routing.scenarios} routing scenarios across ${routing.skills} skills (${routing.byKind.positive} positive, ${routing.byKind.negative} negative, ${routing.byKind.overlap} overlap).\n`);
+  process.stdout.write(`Validated ${behavior.scenarios} focused behavior contracts across ${behavior.skills} skills and ${behavior.agents} agents.\n`);
+  process.stdout.write("Use the official plugin-eval flow to execute focused model-based behavior checks; this suite intentionally excludes E2E and A/B evaluation.\n");
 }

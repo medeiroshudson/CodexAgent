@@ -1,4 +1,4 @@
 interface:
   display_name: "Task Breakdown"
-  short_description: "Split complex work into verifiable tasks"
-  default_prompt: "Use $task-breakdown to turn this request into an executable task graph."
+  short_description: "Build dependency-safe executable task graphs"
+  default_prompt: "Use $task-breakdown to turn this approved multi-component change into atomic task packets with contracts, dependencies, safe concurrency, and validation."

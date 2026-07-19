@@ -1,4 +1,4 @@
 interface:
   display_name: "External Research"
-  short_description: "Verify external APIs with authoritative sources"
-  default_prompt: "Use $external-research to verify the external API or library behavior."
+  short_description: "Verify versioned external contracts with sources"
+  default_prompt: "Use $external-research to resolve this implementation-relevant external contract with version-matched authoritative citations and explicit uncertainty."

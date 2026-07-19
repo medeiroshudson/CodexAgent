@@ -21,3 +21,7 @@ Allowed statuses are `detected`, `inferred`, and `unknown`. Allowed confidence v
 - Supplied analysis must target the same repository root. Evidence paths are checked against the working tree before rendering; missing, absolute, or escaping paths are rejected.
 
 The JSON Schema is distributed in the source repository as `schemas/project-analysis.schema.json`. The deterministic validator also runs before preview or apply, including when `--analysis` supplies model-assisted results.
+
+## Agent profiles
+
+Native `.codex/agents/*.toml` profiles are generated from the plugin's canonical Markdown prompts. Project analysis may determine whether project profiles are useful, but it must not rewrite their role contract, hard-code a model, or create divergent prompt copies. The public CLI bundle embeds the generated definitions so `npx --yes @codex-agent/cli@latest init` works outside the source workspace.

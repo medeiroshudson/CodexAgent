@@ -1,4 +1,4 @@
 interface:
   display_name: "Implementation"
-  short_description: "Implement approved changes incrementally"
-  default_prompt: "Use $implementation to execute the approved plan and verify each change."
+  short_description: "Implement authorized changes with fresh evidence"
+  default_prompt: "Use $implementation to deliver this authorized bounded change, preserve unrelated work, validate incrementally, and report fresh evidence."

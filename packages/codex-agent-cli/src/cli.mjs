@@ -3,6 +3,7 @@ import path from "node:path";
 import {
   buildContextIndex,
   diagnoseProject,
+  evaluateBehaviorContracts,
   evaluateRouting,
   initializeProject,
   migrateContext,
@@ -113,7 +114,14 @@ export const main = async (args) => {
   }
 
   if (command === "eval") {
-    const result = evaluateRouting(options);
+    const routing = evaluateRouting(options);
+    const behavior = evaluateBehaviorContracts(options);
+    const result = {
+      ok: routing.ok && behavior.ok,
+      routing,
+      behavior,
+      failures: [...routing.failures, ...behavior.failures]
+    };
     write(result, options.json);
     if (!result.ok) process.exitCode = 1;
     return;

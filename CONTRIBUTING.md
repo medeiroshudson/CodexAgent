@@ -8,6 +8,7 @@ Run:
 
 ```bash
 npm ci
+npm run agents:check
 npm test
 npm run validate
 npm run eval
@@ -38,6 +39,7 @@ See [docs/releasing-cli.md](docs/releasing-cli.md) for initial npm setup and the
 ## Design rules
 
 - Keep skill frontmatter limited to `name` and `description`.
+- Keep canonical agent prompts under `plugins/codex-agent/agents/`; run `npm run agents:sync` after editing them and never edit generated TOML or ESM profiles directly.
 - Keep commands thin and put workflows in skills.
 - Put detailed skill material one level below `references/`.
 - Do not add a custom installer for behavior already provided by the Codex marketplace.

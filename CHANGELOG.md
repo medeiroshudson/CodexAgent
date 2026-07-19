@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Added the `agent-orchestration` skill for context-aware coordination from classification through integrated verification.
+- Reworked every bundled agent and skill prompt with explicit authority, decision, failure, quality, handoff, and output contracts.
+- Added architecture analyst and build verifier roles, bringing the canonical project profile set to eight agents.
+- Added deterministic agent-prompt synchronization for project TOML templates and the self-contained CLI bundle.
+- Expanded evaluation to 44 positive, negative, and overlap routing fixtures plus 19 focused skill and agent behavior contracts.
 - Added a navigation-context migrator with root discovery, metadata conversion, filtering, preview, backups, and native index generation.
 - Added the `context-curation` skill, `/remember` command, and approval-gated `context save` workflow.
 - Added evidence validation, duplicate detection, secret screening, managed updates, backups, and coordinated context/index writes.

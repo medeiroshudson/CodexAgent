@@ -1,6 +1,6 @@
 # Codex Agent
 
-`codex-agent` is a native Codex plugin for context-aware software development. It packages focused workflows for planning, repository context discovery and curation, task decomposition, implementation, testing, external research, code review, and completion verification.
+`codex-agent` is a native Codex plugin for context-aware software development. It packages coordinated and focused workflows for agent orchestration, planning, repository context discovery and curation, task decomposition, implementation, testing, external research, code review, and completion verification.
 
 The plugin uses Codex-native boundaries:
 
@@ -85,6 +85,7 @@ The `$project-init` workflow runs `$context-discovery` before the deterministic 
 
 Invoke skills explicitly with `$` or use natural requests that match their descriptions:
 
+- `$agent-orchestration`
 - `$plan-and-approve`
 - `$context-discovery`
 - `$task-breakdown`
@@ -170,7 +171,9 @@ Migrated documents are isolated under `.agents/context/migrated/`; existing nati
 
 ## Agents and concurrency
 
-The plugin provides six focused roles: context scout, task planner, implementer, test engineer, code reviewer, and documentation researcher.
+The plugin provides eight focused roles: context scout, documentation researcher, architecture analyst, task planner, implementer, test engineer, code reviewer, and build verifier.
+
+Canonical agent instructions live once under `plugins/codex-agent/agents/`. `npm run agents:sync` deterministically generates the embedded CLI module and project TOML templates; `npm run agents:check` prevents prompt drift. The self-contained CLI bundle embeds those definitions, so project initialization through `npx` does not depend on the source workspace.
 
 Project templates default to four concurrent threads and a maximum depth of one. Read-heavy work can run in parallel; overlapping writes should remain serialized or use isolated worktrees.
 
@@ -188,6 +191,7 @@ Hooks reinforce workflow discipline but are not a security boundary. Use Codex s
 npx --yes @codex-agent/cli@latest doctor --json
 npx --yes @codex-agent/cli@latest eval --json
 npm test
+npm run agents:check
 npm run validate
 npm run eval
 ```

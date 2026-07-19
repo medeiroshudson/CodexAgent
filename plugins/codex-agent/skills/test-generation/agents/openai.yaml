@@ -1,4 +1,4 @@
 interface:
   display_name: "Test Generation"
-  short_description: "Design and implement meaningful test coverage"
-  default_prompt: "Use $test-generation to add focused tests for this change."
+  short_description: "Prove behavior with focused deterministic tests"
+  default_prompt: "Use $test-generation to cover this behavior or regression at the correct boundary with the smallest deterministic test set."

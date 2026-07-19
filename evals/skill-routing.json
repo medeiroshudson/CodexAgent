@@ -1,68 +1,285 @@
 {
-  "version": 1,
+  "version": 2,
   "cases": [
     {
+      "id": "orchestrate-approved-feature",
+      "kind": "positive",
+      "prompt": "Coordinate the approved account-security feature across API, storage, tests, review, and final verification.",
+      "expectedSkill": "agent-orchestration"
+    },
+    {
+      "id": "orchestrate-complex-refactor",
+      "kind": "positive",
+      "prompt": "Run a coordinated workflow for this multi-component refactor, keeping context, task handoffs, integration, and verification aligned.",
+      "expectedSkill": "agent-orchestration"
+    },
+    {
       "id": "plan-feature",
-      "prompt": "Propose an approach before adding organization-level SSO to this repository.",
+      "kind": "positive",
+      "prompt": "Propose an approach before adding organization-level SSO, including impact, alternatives, rollout, rollback, and validation.",
+      "expectedSkill": "plan-and-approve"
+    },
+    {
+      "id": "plan-migration",
+      "kind": "positive",
+      "prompt": "Plan this database migration and ask for one decision before editing because the compatibility and rollback approach are not approved.",
       "expectedSkill": "plan-and-approve"
     },
     {
       "id": "discover-context",
-      "prompt": "Find the security and API conventions that apply before changing the authentication service.",
+      "kind": "positive",
+      "prompt": "Find the security instructions, indexed context, implementation pattern, nearest tests, and commands relevant to the authentication service.",
+      "expectedSkill": "context-discovery"
+    },
+    {
+      "id": "discover-unfamiliar-module",
+      "kind": "positive",
+      "prompt": "Before changing this unfamiliar package, return the smallest verified repository context packet and unresolved conflicts.",
       "expectedSkill": "context-discovery"
     },
     {
       "id": "break-down-migration",
-      "prompt": "Split this approved database migration into dependency-aware implementation tasks.",
+      "kind": "positive",
+      "prompt": "Split this approved migration into atomic tasks with contracts, dependencies, overlap analysis, validation, and a critical path.",
+      "expectedSkill": "task-breakdown"
+    },
+    {
+      "id": "break-down-multi-component",
+      "kind": "positive",
+      "prompt": "Convert the approved API, worker, and schema changes into complete task packets and safe execution batches.",
       "expectedSkill": "task-breakdown"
     },
     {
       "id": "implement-approved",
-      "prompt": "Implement the approved plan and preserve my unrelated working-tree changes.",
+      "kind": "positive",
+      "prompt": "Implement the approved pagination fix, preserve my unrelated working-tree changes, add focused coverage, and report fresh evidence.",
+      "expectedSkill": "implementation"
+    },
+    {
+      "id": "implement-direct-request",
+      "kind": "positive",
+      "prompt": "Update the repository validator to reject duplicate identifiers and run the relevant tests; the implementation is authorized.",
       "expectedSkill": "implementation"
     },
     {
       "id": "generate-regression",
-      "prompt": "Add a regression test for the pagination bug and run the relevant suite.",
+      "kind": "positive",
+      "prompt": "Add a deterministic regression test for the pagination bug at the correct boundary and run the relevant suite.",
+      "expectedSkill": "test-generation"
+    },
+    {
+      "id": "generate-contract-tests",
+      "kind": "positive",
+      "prompt": "Add focused contract tests for the serializer schema, including the important rejection boundary without testing private helpers.",
       "expectedSkill": "test-generation"
     },
     {
       "id": "review-branch",
-      "prompt": "Review this branch for correctness, security issues, and missing tests without changing files.",
+      "kind": "positive",
+      "prompt": "Review this branch for correctness, security, data loss, concurrency, compatibility, and missing tests without changing files.",
+      "expectedSkill": "code-review"
+    },
+    {
+      "id": "review-pull-request",
+      "kind": "positive",
+      "prompt": "Audit the pull request and return only actionable evidence-backed findings with tight locations and realistic severity.",
       "expectedSkill": "code-review"
     },
     {
       "id": "research-api",
-      "prompt": "Verify the current official API contract for this SDK version and cite the source.",
+      "kind": "positive",
+      "prompt": "Verify the installed SDK version's current official API contract and cite the exact source before we choose an implementation.",
+      "expectedSkill": "external-research"
+    },
+    {
+      "id": "research-framework-migration",
+      "kind": "positive",
+      "prompt": "Resolve whether this framework version supports the proposed migration using local version evidence and authoritative documentation.",
       "expectedSkill": "external-research"
     },
     {
       "id": "verify-completion",
-      "prompt": "Before you say this change is done, run proportional checks and report fresh evidence.",
+      "kind": "positive",
+      "prompt": "Before declaring this change complete, map every acceptance criterion to fresh tests, validation, packaging, and residual risk.",
+      "expectedSkill": "verification-before-completion"
+    },
+    {
+      "id": "verify-generated-artifacts",
+      "kind": "positive",
+      "prompt": "Inspect the final diff and verify schemas, generated files, package contents, commands, and material untested paths.",
       "expectedSkill": "verification-before-completion"
     },
     {
       "id": "initialize-project",
-      "prompt": "Analyze this existing repository and preview project-specific Codex guidance before creating any files.",
+      "kind": "positive",
+      "prompt": "Analyze this existing repository and preview evidence-backed Codex guidance and native agent profiles before creating files.",
+      "expectedSkill": "project-init"
+    },
+    {
+      "id": "refresh-project-guidance",
+      "kind": "positive",
+      "prompt": "Refresh the managed Codex setup after our stack and validation commands changed, preserving manual content and showing conflicts.",
       "expectedSkill": "project-init"
     },
     {
       "id": "curate-context",
-      "prompt": "Remember this confirmed architectural constraint in the project context, but show me the exact preview before saving it.",
+      "kind": "positive",
+      "prompt": "Remember this confirmed architectural constraint in indexed project context, deduplicate it, and show the exact preview before saving.",
       "expectedSkill": "context-curation",
       "expectedDisposition": "save-after-approval"
-    },
-    {
-      "id": "reject-transient-context",
-      "prompt": "Save today's temporary test output as permanent project context so we can inspect it once tomorrow.",
-      "expectedSkill": "context-curation",
-      "expectedDisposition": "discard"
     },
     {
       "id": "migrate-navigation-context",
-      "prompt": "Migrate this project's existing navigation-based agent context into the native indexed context format, showing a preview first.",
+      "kind": "positive",
+      "prompt": "Migrate this reviewed navigation-based knowledge tree into native indexed context with preview, skips, conflicts, and backups.",
       "expectedSkill": "context-curation",
       "expectedDisposition": "save-after-approval"
+    },
+    {
+      "id": "negative-simple-explanation",
+      "kind": "negative",
+      "prompt": "Explain in two sentences what this already supplied pure function returns; do not inspect or change the repository.",
+      "excludedSkills": ["agent-orchestration", "implementation", "task-breakdown"],
+      "expectedDisposition": "no-skill"
+    },
+    {
+      "id": "negative-trivial-typo",
+      "kind": "negative",
+      "prompt": "Fix the single spelling mistake in this known documentation file and make no other changes.",
+      "excludedSkills": ["agent-orchestration", "plan-and-approve", "task-breakdown"]
+    },
+    {
+      "id": "negative-approved-no-replan",
+      "kind": "negative",
+      "prompt": "The concrete plan is approved; execute it now without asking me to approve the same approach again.",
+      "excludedSkills": ["plan-and-approve"]
+    },
+    {
+      "id": "negative-review-no-fix",
+      "kind": "negative",
+      "prompt": "Review these changes only and do not implement fixes even if you find an issue.",
+      "excludedSkills": ["implementation", "agent-orchestration"]
+    },
+    {
+      "id": "negative-local-contract-sufficient",
+      "kind": "negative",
+      "prompt": "Use the checked-in generated client and locked dependency types to answer this exact API shape; no external lookup is needed.",
+      "excludedSkills": ["external-research"]
+    },
+    {
+      "id": "negative-coverage-percentage-only",
+      "kind": "negative",
+      "prompt": "Add redundant tests solely to move the coverage dashboard from 94 percent to 95 percent without new behavior risk.",
+      "excludedSkills": ["test-generation"]
+    },
+    {
+      "id": "negative-transient-context",
+      "kind": "negative",
+      "prompt": "Treat today's temporary test output as disposable task state and do not save it as permanent project knowledge.",
+      "excludedSkills": ["context-curation"],
+      "expectedDisposition": "no-skill"
+    },
+    {
+      "id": "negative-no-project-init",
+      "kind": "negative",
+      "prompt": "Change one existing validator function using the repository setup already present; do not regenerate project guidance.",
+      "excludedSkills": ["project-init"]
+    },
+    {
+      "id": "negative-read-only-no-verification",
+      "kind": "negative",
+      "prompt": "Summarize the supplied test output without claiming the implementation is complete or running repository checks.",
+      "excludedSkills": ["verification-before-completion"]
+    },
+    {
+      "id": "negative-small-no-breakdown",
+      "kind": "negative",
+      "prompt": "Make one cohesive change in the named file with a focused unit test; do not create a multi-task graph.",
+      "excludedSkills": ["task-breakdown"]
+    },
+    {
+      "id": "negative-known-files-no-discovery",
+      "kind": "negative",
+      "prompt": "Use only the two supplied files and their supplied test command; no repository discovery is necessary.",
+      "excludedSkills": ["context-discovery"]
+    },
+    {
+      "id": "overlap-unapproved-complex-change",
+      "kind": "overlap",
+      "prompt": "Coordinate a complex unapproved feature: discover repository context, resolve architecture, present a plan, then wait for the material decision.",
+      "expectedSkill": "agent-orchestration",
+      "expectedSkills": ["agent-orchestration", "context-discovery", "plan-and-approve"]
+    },
+    {
+      "id": "overlap-approved-complex-change",
+      "kind": "overlap",
+      "prompt": "Execute this approved multi-component change with context discovery, dependency-aware tasks, bounded implementation, and final verification.",
+      "expectedSkill": "agent-orchestration",
+      "expectedSkills": ["agent-orchestration", "context-discovery", "task-breakdown", "implementation", "verification-before-completion"]
+    },
+    {
+      "id": "overlap-plan-external-contract",
+      "kind": "overlap",
+      "prompt": "Plan the migration, but first verify the installed framework version's official compatibility contract because it changes the design.",
+      "expectedSkill": "plan-and-approve",
+      "expectedSkills": ["plan-and-approve", "external-research"]
+    },
+    {
+      "id": "overlap-discovery-external-gap",
+      "kind": "overlap",
+      "prompt": "Find the repository's integration pattern and then research the current library behavior that local source does not establish.",
+      "expectedSkill": "context-discovery",
+      "expectedSkills": ["context-discovery", "external-research"]
+    },
+    {
+      "id": "overlap-breakdown-tests",
+      "kind": "overlap",
+      "prompt": "Break the approved change into dependency-safe tasks and give the test-only boundary to the focused test workflow.",
+      "expectedSkill": "task-breakdown",
+      "expectedSkills": ["task-breakdown", "test-generation"]
+    },
+    {
+      "id": "overlap-implement-regression",
+      "kind": "overlap",
+      "prompt": "Implement the authorized bug fix, reproduce it with a regression test, and verify the integrated result before completion.",
+      "expectedSkill": "implementation",
+      "expectedSkills": ["implementation", "test-generation", "verification-before-completion"]
+    },
+    {
+      "id": "overlap-review-version-risk",
+      "kind": "overlap",
+      "prompt": "Review the adapter change and verify the disputed upstream API contract from authoritative version-matched sources without editing.",
+      "expectedSkill": "code-review",
+      "expectedSkills": ["code-review", "external-research"]
+    },
+    {
+      "id": "overlap-project-init-discovery",
+      "kind": "overlap",
+      "prompt": "Initialize repository-specific Codex guidance after first discovering instructions, architecture, commands, tests, and context entries.",
+      "expectedSkill": "project-init",
+      "expectedSkills": ["project-init", "context-discovery"]
+    },
+    {
+      "id": "overlap-verify-context-candidate",
+      "kind": "overlap",
+      "prompt": "Verify the completed change first, then separately evaluate whether the confirmed architecture constraint deserves an optional context proposal.",
+      "expectedSkill": "verification-before-completion",
+      "expectedSkills": ["verification-before-completion", "context-curation"]
+    },
+    {
+      "id": "overlap-context-migration-discovery",
+      "kind": "overlap",
+      "prompt": "Preview a navigation-context migration and verify the resulting indexed entries can be selected for representative repository tasks.",
+      "expectedSkill": "context-curation",
+      "expectedSkills": ["context-curation", "context-discovery"],
+      "expectedDisposition": "save-after-approval"
+    },
+    {
+      "id": "overlap-orchestration-external-library",
+      "kind": "overlap",
+      "prompt": "Coordinate the approved feature across components and resolve the version-sensitive external library contract before implementation.",
+      "expectedSkill": "agent-orchestration",
+      "expectedSkills": ["agent-orchestration", "external-research", "implementation", "verification-before-completion"]
     }
   ]
 }

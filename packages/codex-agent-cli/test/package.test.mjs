@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
+import { agentProfiles } from "../../../plugins/codex-agent/generated/agent-profiles.mjs";
 
 const root = path.resolve(import.meta.dirname, "../../..");
 
@@ -104,4 +105,11 @@ test("published tarball runs without the source workspace", () => {
   const migrationResult = JSON.parse(migrationApply.stdout);
   assert.equal(migrationResult.applied, true);
   assert.equal(fs.existsSync(path.join(fixture, ".agents", "context", migrationResult.changes[0].path)), true);
+
+  const appliedInit = run(process.execPath, [executable, "init", "--apply", "--json"], { cwd: fixture });
+  assert.equal(appliedInit.status, 0, appliedInit.stderr);
+  assert.equal(JSON.parse(appliedInit.stdout).applied, true);
+  const installedProfiles = fs.readdirSync(path.join(fixture, ".codex", "agents")).filter((name) => name.endsWith(".toml"));
+  assert.equal(installedProfiles.length, agentProfiles.length);
+  assert.match(fs.readFileSync(path.join(fixture, ".codex", "agents", "context_scout.toml"), "utf8"), /developer_instructions/);
 });

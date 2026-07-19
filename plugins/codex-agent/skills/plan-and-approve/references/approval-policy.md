@@ -2,21 +2,34 @@
 
 ## Existing authority
 
-Treat these as sufficient authority for ordinary in-scope work:
+Ordinary in-scope repository edits and validation are authorized when:
 
-- The user explicitly asks to implement, fix, create, migrate, or update.
-- The user approves a concrete plan.
-- A follow-up adjusts details without withdrawing the original implementation request.
+- the user explicitly asks to implement, fix, create, refactor, migrate, or update;
+- the user approves a concrete plan;
+- a follow-up changes details without withdrawing the original request;
+- an in-scope test or build failure requires a normal correction to satisfy approved criteria.
 
-## New approval required
+Do not create repeated approval gates for each file, command, task, or correction.
 
-Stop and ask when work requires:
+## New authority required
 
-- Destructive or difficult-to-reverse operations.
-- External publication, messages, purchases, deployments, or permission changes.
-- Transmission of sensitive or private data.
-- A materially different product direction or architecture.
-- A dependency, service, or credential choice that changes operational ownership.
+Stop and ask only when the next action introduces:
 
-Sandbox and tool approvals remain the real permission boundary. Workflow files and hooks are guardrails only.
+- destructive or difficult-to-reverse operations;
+- external publication, messages, deployments, purchases, or permission changes;
+- transmission of sensitive or private data;
+- a materially different product direction, architecture, or scope;
+- a production dependency, service, credential, or operational owner not covered by the approved approach;
+- replacement of conflicting user-owned work that cannot be preserved safely.
 
+## Decision request
+
+State:
+
+- the exact unresolved decision;
+- the evidence and available options;
+- impact, reversibility, and operational ownership;
+- the recommended option and why;
+- what implementation authority approval grants.
+
+Sandbox and tool approvals remain the real enforcement boundary. Prompts, plans, and hooks are workflow guardrails only.

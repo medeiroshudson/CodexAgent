@@ -1,5 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+import { agentProfiles } from "../../../generated/agent-profiles.mjs";
+
+export { agentProfiles };
 
 const ANALYSIS_VERSION = 1;
 const IGNORED_DIRECTORIES = new Set([
@@ -374,16 +377,7 @@ const renderProject = (analysis) => {
 const markdownBlock = (id, body) => `<!-- codex-agent:managed:start ${id} -->\n${body.trim()}\n<!-- codex-agent:managed:end ${id} -->`;
 const tomlBlock = (id, body) => `# codex-agent:managed:start ${id}\n${body.trim()}\n# codex-agent:managed:end ${id}`;
 
-const agentProfiles = {
-  "context_scout.toml": ["context_scout", "Read-only context specialist for repository guidance, patterns, tests, and relevant files.", "read-only", "Find the smallest relevant instruction and evidence set. Read applicable AGENTS.md guidance and select .agents/context entries explicitly. Return paths, relevance, conflicts, and open questions. Do not edit files."],
-  "task_planner.toml": ["task_planner", "Read-only planner for atomic, dependency-aware implementation tasks.", "read-only", "Convert approved scope into independently verifiable tasks. Define outcomes, dependencies, validation, and completion criteria. Do not edit repository files."],
-  "implementer.toml": ["implementer", "Execution-focused agent for one bounded implementation task.", "workspace-write", "Implement only the assigned task using supplied context and nearby patterns. Preserve unrelated changes, validate narrowly, and report evidence."],
-  "test_engineer.toml": ["test_engineer", "Test specialist for focused behavior and regression coverage.", "workspace-write", "Design deterministic tests for changed behavior and important failures. Follow existing conventions and report exact validation outcomes."],
-  "code_reviewer.toml": ["code_reviewer", "Read-only reviewer for correctness, security, regressions, and missing tests.", "read-only", "Lead with evidence-backed findings ordered by severity. Prioritize correctness, security, compatibility, data loss, and coverage. Do not edit files."],
-  "docs_researcher.toml": ["docs_researcher", "Read-only researcher for authoritative external API and framework documentation.", "read-only", "Verify version-specific behavior using installed source and authoritative documentation. Return citations, uncertainty, and implementation consequences. Do not edit files."]
-};
-
-const renderProfile = ([name, description, sandbox, instructions]) => `name = ${JSON.stringify(name)}\ndescription = ${JSON.stringify(description)}\nsandbox_mode = ${JSON.stringify(sandbox)}\ndeveloper_instructions = ${JSON.stringify(instructions)}`;
+const renderProfile = ({ name, description, sandboxMode, developerInstructions }) => `name = ${JSON.stringify(name)}\ndescription = ${JSON.stringify(description)}\nsandbox_mode = ${JSON.stringify(sandboxMode)}\ndeveloper_instructions = ${JSON.stringify(developerInstructions)}`;
 
 export const renderProjectFiles = (analysis, existingIndex = null) => {
   const files = new Map([
@@ -395,7 +389,7 @@ export const renderProjectFiles = (analysis, existingIndex = null) => {
     [".agents/context/project-intelligence/project.md", { kind: "markdown", id: "project-intelligence", title: "# Project Intelligence", body: renderProject(analysis) }],
     [".codex/config.toml", { kind: "toml", id: "agent-settings", body: "[agents]\nmax_threads = 4\nmax_depth = 1\n\n[features]\nhooks = true" }]
   ]);
-  for (const [file, profile] of Object.entries(agentProfiles)) files.set(`.codex/agents/${file}`, { kind: "toml", id: `profile-${profile[0]}`, body: renderProfile(profile) });
+  for (const profile of agentProfiles) files.set(`.codex/agents/${profile.file}`, { kind: "toml", id: `profile-${profile.name}`, body: renderProfile(profile) });
 
   const priorEntries = Array.isArray(existingIndex?.entries) ? existingIndex.entries : [];
   const managedIds = new Set(MANAGED_CONTEXT.map(([id]) => id));

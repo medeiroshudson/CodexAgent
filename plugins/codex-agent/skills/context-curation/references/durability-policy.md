@@ -23,6 +23,13 @@ Do not save unverified hypotheses, one-off implementation details, test output, 
 
 Require at least medium confidence and one valid repository evidence path. A user-approved decision may use the applicable `AGENTS.md`, decision record, issue document, or implementation evidence.
 
+## Stability and review
+
+- Add `reviewWhen` when a dependency version, schema, platform contract, operational owner, or product rule could invalidate the entry.
+- Prefer constraints and rationale over snapshots of current file layout.
+- When durable knowledge conflicts with current code, do not silently choose one. Report whether the context is stale, the implementation is noncompliant, or the evidence is insufficient.
+- Replace an existing entry rather than creating a second source of truth when semantics overlap.
+
 ## Prompt threshold
 
 Prompt only when future rediscovery cost is material. Present at most one grouped proposal after completing the primary task. Do not delay or weaken the completion report when the user declines.

@@ -27,4 +27,8 @@ Required fields are `version`, `title`, `kind`, `summary`, `scope`, `contentMark
 
 The writer derives the ID and destination from `kind` and `title`; callers cannot select an arbitrary path. Evidence must be repository-relative and exist at apply time. Confidence must be `medium` or `high`.
 
+Before proposing, compare title, summary, scope, tags, and content semantics with existing indexed entries. A renamed duplicate is still a duplicate. When an existing entry should change, identify the current ID and present the replacement diff rather than creating a new entry.
+
+Use `reviewWhen` for facts whose validity depends on a version, schema, integration, policy, or operational owner. Do not use it as a generic reminder.
+
 Preview is the default. Applying requires `--apply`. Replacing an existing entry additionally requires `--update`, creates a backup, and preserves manual Markdown outside the managed region.

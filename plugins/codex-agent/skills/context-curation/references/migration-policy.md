@@ -18,3 +18,11 @@ The migrator accepts either a project root or a context directory. Discovery che
 - `--force` permits replacement of a conflicting migrated document after review and creates backups. Valid migration markers preserve manual Markdown outside the managed region; an unmarked conflicting file requires full replacement from its backup-protected state.
 
 Preview is always the default for this migration format. Applying requires `--apply`. Any unresolved conflict prevents all writes.
+
+## Post-migration verification
+
+- Confirm every created index path resolves inside `.agents/context/`.
+- Inspect representative transformed links and metadata.
+- Confirm skipped workflows and runtime instructions were not converted into passive knowledge.
+- Confirm symlinks and sensitive-looking files remain skipped.
+- Run doctor and verify `$context-discovery` can select representative imported entries.

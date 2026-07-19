@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import {
   analyzeProject,
+  agentProfiles,
   initializeProject,
   renderProjectFiles,
   validateAnalysisEvidence,
@@ -21,6 +22,7 @@ import {
 
 export {
   analyzeProject,
+  agentProfiles,
   buildContextIndex,
   discoverNavigationContext,
   initializeProject,
@@ -146,7 +148,7 @@ export const diagnoseProject = ({ root }) => {
     const agents = path.join(projectRoot, ".codex", "agents");
     const profiles = listFiles(agents).filter((file) => file.endsWith(".toml"));
     check(checks, "project-config", fs.existsSync(config), config);
-    check(checks, "project-agents", profiles.length >= 6, `${profiles.length} profiles in ${agents}`);
+    check(checks, "project-agents", profiles.length === agentProfiles.length, `${profiles.length}/${agentProfiles.length} profiles in ${agents}`);
   }
 
   const contextIndex = path.join(projectRoot, ".agents", "context", "index.json");
@@ -165,10 +167,11 @@ export const diagnoseProject = ({ root }) => {
   if (isSourceWorkspace) {
     const skillsRoot = path.join(projectRoot, "plugins", "codex-agent", "skills");
     const skillFiles = listFiles(skillsRoot).filter((file) => file.endsWith(`${path.sep}SKILL.md`));
-    check(checks, "skills", skillFiles.length >= 9, `${skillFiles.length} skills`);
+    const skillDirectories = fs.readdirSync(skillsRoot, { withFileTypes: true }).filter((entry) => entry.isDirectory()).length;
+    check(checks, "skills", skillFiles.length > 0 && skillFiles.length === skillDirectories, `${skillFiles.length}/${skillDirectories} skill entrypoints`);
 
     const agentRoot = path.join(projectRoot, "plugins", "codex-agent", "agents");
-    check(checks, "plugin-agents", listFiles(agentRoot).filter((file) => file.endsWith(".md")).length >= 6, agentRoot);
+    check(checks, "plugin-agents", listFiles(agentRoot).filter((file) => file.endsWith(".md")).length === agentProfiles.length, `${agentProfiles.length} canonical profiles in ${agentRoot}`);
 
     const hooks = path.join(projectRoot, "plugins", "codex-agent", "hooks", "hooks.json");
     check(checks, "hooks", fs.existsSync(hooks) && !parseJson(hooks).error, hooks);
@@ -190,14 +193,81 @@ export const evaluateRouting = ({ root }) => {
   );
   const ids = new Set();
   const failures = [];
+  const byKind = { positive: 0, negative: 0, overlap: 0 };
+  const positiveSkills = new Set();
   for (const item of suite.cases ?? []) {
     if (ids.has(item.id)) failures.push(`duplicate case id: ${item.id}`);
     ids.add(item.id);
+    const kind = item.kind ?? "positive";
+    if (!Object.hasOwn(byKind, kind)) failures.push(`${item.id}: invalid routing kind ${kind}`);
+    else byKind[kind] += 1;
     if (!item.prompt || item.prompt.length < 20) failures.push(`${item.id}: prompt is too short`);
-    if (!available.has(item.expectedSkill)) failures.push(`${item.id}: missing skill ${item.expectedSkill}`);
-    if (item.expectedDisposition && !["save-after-approval", "discard", "route-to-agents"].includes(item.expectedDisposition)) {
+    if (kind === "positive" || kind === "overlap") {
+      if (!available.has(item.expectedSkill)) failures.push(`${item.id}: missing skill ${item.expectedSkill}`);
+      if (kind === "positive" && available.has(item.expectedSkill)) positiveSkills.add(item.expectedSkill);
+    }
+    if (kind === "overlap") {
+      if (!Array.isArray(item.expectedSkills) || item.expectedSkills.length < 2) failures.push(`${item.id}: overlap case requires at least two expectedSkills`);
+      else {
+        if (!item.expectedSkills.includes(item.expectedSkill)) failures.push(`${item.id}: expectedSkills must include primary expectedSkill`);
+        for (const skill of item.expectedSkills) if (!available.has(skill)) failures.push(`${item.id}: missing overlap skill ${skill}`);
+      }
+    }
+    if (kind === "negative") {
+      if (!Array.isArray(item.excludedSkills) || item.excludedSkills.length === 0) failures.push(`${item.id}: negative case requires excludedSkills`);
+      else for (const skill of item.excludedSkills) if (!available.has(skill)) failures.push(`${item.id}: missing excluded skill ${skill}`);
+      if (item.expectedSkill) failures.push(`${item.id}: negative case must not define expectedSkill`);
+    }
+    if (item.expectedDisposition && !["save-after-approval", "discard", "route-to-agents", "no-skill"].includes(item.expectedDisposition)) {
       failures.push(`${item.id}: invalid expectedDisposition`);
     }
   }
-  return { ok: failures.length === 0, scenarios: suite.cases?.length ?? 0, skills: available.size, failures };
+  for (const [kind, count] of Object.entries(byKind)) if (count === 0) failures.push(`routing suite has no ${kind} cases`);
+  for (const skill of available) if (!positiveSkills.has(skill)) failures.push(`routing suite has no positive case for ${skill}`);
+  return { ok: failures.length === 0, scenarios: suite.cases?.length ?? 0, skills: available.size, byKind, failures };
+};
+
+export const evaluateBehaviorContracts = ({ root }) => {
+  const projectRoot = path.resolve(root);
+  const suitePath = path.join(projectRoot, "evals", "behavior-contracts.json");
+  if (!fs.existsSync(suitePath)) throw new Error(`Behavior suite not found: ${suitePath}`);
+  const suite = JSON.parse(fs.readFileSync(suitePath, "utf8"));
+  const skillsRoot = path.join(projectRoot, "plugins", "codex-agent", "skills");
+  const availableSkills = new Set(
+    fs.readdirSync(skillsRoot, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+  );
+  const availableAgents = new Set(agentProfiles.map((profile) => profile.name));
+  const coveredSkills = new Set();
+  const coveredAgents = new Set();
+  const ids = new Set();
+  const failures = [];
+
+  for (const item of suite.cases ?? []) {
+    if (ids.has(item.id)) failures.push(`duplicate behavior case id: ${item.id}`);
+    ids.add(item.id);
+    if (!item.prompt || item.prompt.length < 20) failures.push(`${item.id}: prompt is too short`);
+    if (!Array.isArray(item.requiredBehaviors) || item.requiredBehaviors.length < 2) failures.push(`${item.id}: requires at least two requiredBehaviors`);
+    if (!Array.isArray(item.forbiddenBehaviors) || item.forbiddenBehaviors.length < 1) failures.push(`${item.id}: requires at least one forbiddenBehavior`);
+    if (item.subjectType === "skill") {
+      if (!availableSkills.has(item.subject)) failures.push(`${item.id}: unknown skill ${item.subject}`);
+      else coveredSkills.add(item.subject);
+    } else if (item.subjectType === "agent") {
+      if (!availableAgents.has(item.subject)) failures.push(`${item.id}: unknown agent ${item.subject}`);
+      else coveredAgents.add(item.subject);
+    } else {
+      failures.push(`${item.id}: invalid subjectType ${item.subjectType}`);
+    }
+  }
+
+  for (const skill of availableSkills) if (!coveredSkills.has(skill)) failures.push(`missing behavior contract for skill ${skill}`);
+  for (const agent of availableAgents) if (!coveredAgents.has(agent)) failures.push(`missing behavior contract for agent ${agent}`);
+  return {
+    ok: failures.length === 0,
+    scenarios: suite.cases?.length ?? 0,
+    skills: coveredSkills.size,
+    agents: coveredAgents.size,
+    failures
+  };
 };

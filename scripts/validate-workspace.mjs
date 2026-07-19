@@ -3,6 +3,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { agentProfiles } from "../plugins/codex-agent/generated/agent-profiles.mjs";
+import { loadAgentDefinitions, renderAgentProfilesModule, renderAgentToml } from "./sync-agent-profiles.mjs";
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const defaultRoot = path.resolve(scriptDirectory, "..");
@@ -58,6 +60,9 @@ export const validateWorkspace = (root = defaultRoot) => {
   const contextProposalSchemaPath = requireFile("schemas/context-proposal.schema.json");
   const cliManifestPath = requireFile("packages/codex-agent-cli/package.json");
   const publishWorkflowPath = requireFile(".github/workflows/publish-cli.yml");
+  const routingSuitePath = requireFile("evals/skill-routing.json");
+  const behaviorSuitePath = requireFile("evals/behavior-contracts.json");
+  const generatedAgentsPath = requireFile("plugins/codex-agent/generated/agent-profiles.mjs");
   requireFile("scripts/derive-cli-version.mjs");
   requireFile("package-lock.json");
   requireFile("plugins/codex-agent/hooks/hooks.json");
@@ -66,6 +71,27 @@ export const validateWorkspace = (root = defaultRoot) => {
   requireFile("plugins/codex-agent/skills/context-curation/scripts/navigation-migrate.mjs");
 
   if (fs.existsSync(contextProposalSchemaPath)) parseJson(contextProposalSchemaPath, errors);
+  const routingSuite = fs.existsSync(routingSuitePath) ? parseJson(routingSuitePath, errors) : null;
+  if (fs.existsSync(behaviorSuitePath)) parseJson(behaviorSuitePath, errors);
+
+  let canonicalAgents = [];
+  try {
+    canonicalAgents = loadAgentDefinitions(workspace);
+    if (canonicalAgents.length !== agentProfiles.length) errors.push("generated agent profile count does not match canonical sources");
+    if (fs.existsSync(generatedAgentsPath) && fs.readFileSync(generatedAgentsPath, "utf8") !== renderAgentProfilesModule(canonicalAgents)) {
+      errors.push("generated agent profile module is out of sync; run npm run agents:sync");
+    }
+    for (const definition of canonicalAgents) {
+      for (const heading of ["Mission", "Operating contract", "Critical rules", "Workflow", "Return contract", "Avoid"]) {
+        if (!new RegExp(`^## ${heading}$`, "m").test(definition.developerInstructions)) errors.push(`${definition.source}: missing required heading ${heading}`);
+      }
+      const template = path.join(workspace, "templates", "project", ".codex", "agents", definition.file);
+      if (!fs.existsSync(template)) errors.push(`missing generated agent template: ${path.relative(workspace, template)}`);
+      else if (fs.readFileSync(template, "utf8") !== renderAgentToml(definition)) errors.push(`${path.relative(workspace, template)}: out of sync with canonical prompt`);
+    }
+  } catch (error) {
+    errors.push(`canonical agent profiles: ${error.message}`);
+  }
 
   const manifest = fs.existsSync(manifestPath) ? parseJson(manifestPath, errors) : null;
   if (manifest) {
@@ -146,7 +172,8 @@ export const validateWorkspace = (root = defaultRoot) => {
   const skillDirectories = fs.existsSync(skillsRoot)
     ? fs.readdirSync(skillsRoot, { withFileTypes: true }).filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort()
     : [];
-  if (skillDirectories.length !== 10) errors.push(`expected 10 skills, found ${skillDirectories.length}`);
+  const routedSkills = new Set((routingSuite?.cases ?? []).flatMap((item) => [item.expectedSkill, ...(item.expectedSkills ?? [])]).filter(Boolean));
+  for (const skill of skillDirectories) if (!routedSkills.has(skill)) errors.push(`${skill}: missing positive routing fixture`);
   for (const skill of skillDirectories) {
     const skillFile = path.join(skillsRoot, skill, "SKILL.md");
     const metadataFile = path.join(skillsRoot, skill, "agents", "openai.yaml");
@@ -164,6 +191,10 @@ export const validateWorkspace = (root = defaultRoot) => {
       if (extra.length) errors.push(`${skill}: unsupported frontmatter fields: ${extra.join(", ")}`);
     }
     if (/\[TODO|TODO:/i.test(content)) errors.push(`${skill}: contains TODO placeholders`);
+    for (const heading of ["Outcome", "Critical rules", "Output contract"]) {
+      if (!new RegExp(`^## ${heading}$`, "m").test(content)) errors.push(`${skill}: missing required heading ${heading}`);
+    }
+    if (!/^## .*workflow$/im.test(content)) errors.push(`${skill}: missing workflow section`);
     if (!fs.existsSync(metadataFile)) errors.push(`${skill}: missing agents/openai.yaml`);
     else if (!fs.readFileSync(metadataFile, "utf8").includes(`$${skill}`)) errors.push(`${skill}: default_prompt must mention $${skill}`);
     if (fs.existsSync(path.join(skillsRoot, skill, "README.md"))) errors.push(`${skill}: skills must not include README.md`);
@@ -171,7 +202,7 @@ export const validateWorkspace = (root = defaultRoot) => {
 
   const agentCount = listFiles(path.join(workspace, "plugins", "codex-agent", "agents")).filter((file) => file.endsWith(".md")).length;
   const commandCount = listFiles(path.join(workspace, "plugins", "codex-agent", "commands")).filter((file) => file.endsWith(".md")).length;
-  if (agentCount !== 6) errors.push(`expected 6 plugin agents, found ${agentCount}`);
+  if (agentCount !== canonicalAgents.length) errors.push(`expected ${canonicalAgents.length} canonical agents, found ${agentCount}`);
   if (commandCount !== 8) errors.push(`expected 8 commands, found ${commandCount}`);
 
   const predecessorName = ["Open", "Agents", "Control"].join("");

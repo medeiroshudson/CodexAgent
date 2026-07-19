@@ -1,4 +1,4 @@
 interface:
   display_name: "Context Curation"
-  short_description: "Review and save durable project knowledge"
-  default_prompt: "Use $context-curation to review and save this durable project knowledge."
+  short_description: "Curate durable indexed project knowledge"
+  default_prompt: "Use $context-curation to classify, deduplicate, preview, and only then save or migrate this durable project knowledge."

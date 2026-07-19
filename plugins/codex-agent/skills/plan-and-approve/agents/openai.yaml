@@ -1,4 +1,4 @@
 interface:
   display_name: "Plan and Approve"
-  short_description: "Align scope before making repository changes"
-  default_prompt: "Use $plan-and-approve to propose and approve an implementation approach."
+  short_description: "Align material scope and architecture before edits"
+  default_prompt: "Use $plan-and-approve to map repository impact, alternatives, boundaries, risks, rollback, and validation before requesting one clear decision."
