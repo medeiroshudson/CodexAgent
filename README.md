@@ -96,7 +96,7 @@ Invoke skills explicitly with `$` or use natural requests that match their descr
 - `$project-init`
 - `$context-curation`
 
-Commands provide short entrypoints: `/init`, `/remember`, `/plan`, `/context`, `/review`, `/test`, and `/doctor`.
+Commands provide short entrypoints: `/init`, `/remember`, `/migrate-context`, `/plan`, `/context`, `/review`, `/test`, and `/doctor`.
 
 ## Context model
 
@@ -144,6 +144,29 @@ npx --yes @codex-agent/cli@latest migrate \
 ```
 
 Remove `--dry-run` after reviewing the paths. Existing conflicts are preserved unless `--force` is supplied, in which case backups are created first.
+
+### Migrate OpenAgentsControl context
+
+To migrate a project context created by [OpenAgentsControl](https://github.com/darrenhinde/OpenAgentsControl), use `/migrate-context` in a new Codex task. The bundled navigation migrator accepts either the old project root or its context directory, recognizes `.oac.json`, `.claude/context`, `context`, and `.opencode/context`, converts source metadata into native index entries, and previews without writing.
+
+When the matching CLI release is installed, the equivalent terminal command is:
+
+```bash
+npx --yes @codex-agent/cli@latest migrate navigation \
+  --from /path/to/old-project \
+  --json
+```
+
+Review `changes`, `skipped`, `conflicts`, manifest provenance, and the index diff. Navigation pages, deprecated documents, placeholder-heavy templates, source-runtime procedures, and possible secrets are skipped by default. Apply after review:
+
+```bash
+npx --yes @codex-agent/cli@latest migrate navigation \
+  --from /path/to/old-project \
+  --apply \
+  --json
+```
+
+Migrated documents are isolated under `.agents/context/migrated/`; existing native context remains intact. Use `--include-templates`, `--include-workflows`, or `--include-navigation` only when those skipped classes were reviewed. Conflicting replacements require `--force` and create backups.
 
 ## Agents and concurrency
 

@@ -14,11 +14,17 @@ import {
   saveContextProposal,
   validateContextProposal
 } from "../../../plugins/codex-agent/skills/context-curation/scripts/context-save.mjs";
+import {
+  discoverNavigationContext,
+  migrateNavigationContext
+} from "../../../plugins/codex-agent/skills/context-curation/scripts/navigation-migrate.mjs";
 
 export {
   analyzeProject,
   buildContextIndex,
+  discoverNavigationContext,
   initializeProject,
+  migrateNavigationContext,
   normalizeContextProposal,
   renderContextProposal,
   renderProjectFiles,

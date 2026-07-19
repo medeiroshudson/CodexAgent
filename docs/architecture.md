@@ -15,6 +15,7 @@
 | `project-init/scripts/project-init.mjs` | Deterministic analysis, validation, rendering, merge, backup, and apply |
 | `context-curation` skill | Durable-knowledge classification, deduplication, preview, and explicit approval |
 | `context-curation/scripts/context-save.mjs` | Deterministic context validation, storage, backup, and index coordination |
+| `context-curation/scripts/navigation-migrate.mjs` | Navigation-tree discovery, compatibility filtering, transformation, and indexed migration |
 | `packages/codex-agent-cli/` | Thin CLI for initialization, diagnosis, migration, context storage, and indexing |
 | `evals/` | Routing contracts and behavioral benchmark inputs |
 

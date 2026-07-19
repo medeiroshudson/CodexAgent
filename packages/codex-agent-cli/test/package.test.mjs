@@ -80,4 +80,28 @@ test("published tarball runs without the source workspace", () => {
   const contextResult = JSON.parse(contextApply.stdout);
   assert.equal(contextResult.applied, true);
   assert.equal(fs.existsSync(path.join(fixture, ".agents", "context", contextResult.path)), true);
+
+  const navigationSource = path.join(target, "navigation-source");
+  const navigationContext = path.join(navigationSource, ".opencode", "context");
+  fs.mkdirSync(path.join(navigationContext, "core", "standards"), { recursive: true });
+  fs.writeFileSync(path.join(navigationContext, "navigation.md"), "# Navigation\n\nContext map.\n");
+  fs.writeFileSync(path.join(navigationContext, "core", "standards", "errors.md"), [
+    "<!-- Context: standards/errors | Priority: high | Version: 1.0 | Updated: 2026-07-01 -->",
+    "# Error Handling",
+    "",
+    "> Return typed errors at public boundaries.",
+    "",
+    "Do not leak internal exception details."
+  ].join("\n"));
+  const migrationPreview = run(process.execPath, [executable, "migrate", "navigation", "--from", navigationSource, "--json"], { cwd: fixture });
+  assert.equal(migrationPreview.status, 0, migrationPreview.stderr);
+  const migrationPreviewResult = JSON.parse(migrationPreview.stdout);
+  assert.equal(migrationPreviewResult.mode, "preview");
+  assert.equal(migrationPreviewResult.changes.length, 1);
+
+  const migrationApply = run(process.execPath, [executable, "migrate", "navigation", "--from", navigationSource, "--apply", "--json"], { cwd: fixture });
+  assert.equal(migrationApply.status, 0, migrationApply.stderr);
+  const migrationResult = JSON.parse(migrationApply.stdout);
+  assert.equal(migrationResult.applied, true);
+  assert.equal(fs.existsSync(path.join(fixture, ".agents", "context", migrationResult.changes[0].path)), true);
 });

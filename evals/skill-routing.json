@@ -57,6 +57,12 @@
       "prompt": "Save today's temporary test output as permanent project context so we can inspect it once tomorrow.",
       "expectedSkill": "context-curation",
       "expectedDisposition": "discard"
+    },
+    {
+      "id": "migrate-navigation-context",
+      "prompt": "Migrate this project's existing navigation-based agent context into the native indexed context format, showing a preview first.",
+      "expectedSkill": "context-curation",
+      "expectedDisposition": "save-after-approval"
     }
   ]
 }

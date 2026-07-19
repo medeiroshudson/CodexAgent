@@ -8,6 +8,7 @@ import {
   buildContextIndex,
   initializeProject,
   migrateContext,
+  migrateNavigationContext,
   renderProjectFiles,
   saveContextProposal,
   validateContextProposal,
@@ -50,6 +51,38 @@ const contextProposal = (overrides = {}) => ({
   reviewWhen: ["The transaction library changes"],
   ...overrides
 });
+
+const createNavigationContextFixture = () => {
+  const source = tempDirectory();
+  const context = path.join(source, ".claude", "context");
+  fs.mkdirSync(path.join(context, "core", "standards"), { recursive: true });
+  fs.mkdirSync(path.join(context, "core", "workflows"), { recursive: true });
+  fs.mkdirSync(path.join(context, "project-intelligence"), { recursive: true });
+  fs.mkdirSync(path.join(context, "project"), { recursive: true });
+  fs.writeFileSync(path.join(source, ".oac.json"), JSON.stringify({ version: "1", context: { root: ".claude/context" } }));
+  fs.writeFileSync(path.join(source, ".claude", ".context-manifest.json"), JSON.stringify({
+    version: "1.0.0",
+    profile: "standard",
+    source: { repository: "example/navigation-context", branch: "main", commit: "abc123", downloaded_at: "2026-07-01T00:00:00Z" },
+    categories: ["core", "project-intelligence"]
+  }));
+  fs.writeFileSync(path.join(context, "navigation.md"), "<!-- Context: root/nav | Priority: critical | Version: 1.0 | Updated: 2026-07-01 -->\n# Navigation\n\nLoad standards from this map.\n");
+  fs.writeFileSync(path.join(context, "core", "standards", "code-quality.md"), [
+    "<!-- Context: standards/code | Priority: critical | Version: 2.0 | Updated: 2026-07-01 -->",
+    "# Code Quality",
+    "",
+    "> Keep modules small, cohesive, and independently testable.",
+    "",
+    "Read `.opencode/context/core/standards/security-patterns.md` for security requirements."
+  ].join("\n"));
+  fs.symlinkSync("code-quality.md", path.join(context, "core", "standards", "code.md"));
+  fs.writeFileSync(path.join(context, "core", "workflows", "review.md"), "# Review Workflow\n\nFollow this reusable multi-stage review procedure.\n");
+  fs.writeFileSync(path.join(context, "project-intelligence", "business-domain.md"), "# Billing Domain\n\n> Invoices become immutable after they are issued to a customer.\n\nCorrections require a credit note and a replacement invoice.\n");
+  fs.writeFileSync(path.join(context, "project-intelligence", "technical-domain.md"), "# Technical Domain Template\n\n[Name] [Technology] [Version] [Decision] [Rationale] [Constraint] [Solution] [Owner]\n");
+  fs.writeFileSync(path.join(context, "project", "project-context.md"), "<!-- DEPRECATED: replaced by project intelligence -->\n# Old Project Context\n\nDo not migrate.\n");
+  fs.writeFileSync(path.join(context, "sensitive.md"), "# Credentials\n\nTemporary credential sk-abcdefghijklmnopqrstuvwxyz1234567890 must not migrate.\n");
+  return { source, context };
+};
 
 test("analyzeProject detects package manager, commands, tests, and conventions with evidence", () => {
   const target = createNodeFixture();
@@ -284,4 +317,89 @@ test("migrateContext imports Markdown and rebuilds the index", () => {
 
   assert.deepEqual(result.imported, [path.join(".agents", "context", "imported", "api.md")]);
   assert.equal(index.entries.some((entry) => entry.path === "imported/api.md"), true);
+});
+
+test("navigation migration discovers configured context and previews compatible knowledge only", () => {
+  const target = createNodeFixture();
+  const { source, context } = createNavigationContextFixture();
+  const result = migrateNavigationContext({ root: target, source });
+
+  assert.equal(result.mode, "preview");
+  assert.equal(fs.realpathSync(result.source.contextRoot), fs.realpathSync(context));
+  assert.equal(result.source.detectedBy, ".oac.json");
+  assert.equal(result.source.manifest.profile, "standard");
+  assert.deepEqual(result.changes.map((item) => item.path).sort(), [
+    "migrated/core/standards/code-quality.md",
+    "migrated/project-intelligence/business-domain.md"
+  ]);
+  assert.deepEqual(new Set(result.skipped.map((item) => item.reason)), new Set([
+    "navigation", "runtime-or-workflow", "template", "deprecated", "sensitive-content", "symbolic-link"
+  ]));
+  assert.equal(fs.existsSync(path.join(target, ".agents")), false);
+});
+
+test("navigation migration applies transformed Markdown and native index metadata", () => {
+  const target = createNodeFixture();
+  const { source } = createNavigationContextFixture();
+  const result = migrateNavigationContext({ root: target, source, apply: true });
+  const codeQuality = fs.readFileSync(path.join(target, ".agents", "context", "migrated", "core", "standards", "code-quality.md"), "utf8");
+  const index = JSON.parse(fs.readFileSync(path.join(target, ".agents", "context", "index.json"), "utf8"));
+
+  assert.equal(result.applied, true);
+  assert.match(codeQuality, /codex-agent:migrated:start migrated-core-standards-code-quality/);
+  assert.match(codeQuality, /\.agents\/context\/migrated\/core\/standards\/security-patterns\.md/);
+  assert.doesNotMatch(codeQuality, /<!-- Context:/);
+  const entry = index.entries.find((item) => item.path === "migrated/core/standards/code-quality.md");
+  assert.equal(entry.priority, "critical");
+  assert.ok(entry.tags.includes("standards"));
+  assert.match(entry.summary, /small, cohesive/);
+});
+
+test("navigation migration is idempotent and forced updates preserve manual content with backups", () => {
+  const target = createNodeFixture();
+  const { source, context } = createNavigationContextFixture();
+  const initial = migrateNavigationContext({ root: target, source, apply: true });
+  const destination = path.join(target, ".agents", "context", "migrated", "core", "standards", "code-quality.md");
+  const repeated = migrateNavigationContext({ root: target, source });
+  assert.equal(repeated.changes.every((item) => item.status === "unchanged"), true);
+
+  fs.appendFileSync(destination, "\n## Team note\n\nPreserve this note.\n");
+  fs.appendFileSync(path.join(context, "core", "standards", "code-quality.md"), "\n\nNew confirmed standard.\n");
+  const blocked = migrateNavigationContext({ root: target, source, apply: true });
+  assert.deepEqual(blocked.conflicts, ["migrated/core/standards/code-quality.md"]);
+  assert.match(blocked.changes.find((item) => item.status === "conflict").diff, /New confirmed standard/);
+  assert.doesNotMatch(fs.readFileSync(destination, "utf8"), /New confirmed standard/);
+
+  const updated = migrateNavigationContext({ root: target, source, apply: true, force: true });
+  const content = fs.readFileSync(destination, "utf8");
+  assert.equal(initial.applied && updated.applied, true);
+  assert.equal(updated.backedUp.length, 2);
+  assert.match(content, /New confirmed standard/);
+  assert.match(content, /Preserve this note/);
+});
+
+test("navigation migration rejects context roots that escape project configuration", () => {
+  const target = createNodeFixture();
+  const source = tempDirectory();
+  fs.writeFileSync(path.join(source, ".oac.json"), JSON.stringify({ context: { root: "../outside" } }));
+  assert.throws(() => migrateNavigationContext({ root: target, source }), /escapes its allowed root/);
+});
+
+test("navigation migration include flags opt reviewed classes back into the preview", () => {
+  const target = createNodeFixture();
+  const { source } = createNavigationContextFixture();
+  const result = migrateNavigationContext({
+    root: target,
+    source,
+    includeNavigation: true,
+    includeTemplates: true,
+    includeWorkflows: true
+  });
+  const sources = new Set(result.changes.map((item) => item.source));
+
+  assert.equal(sources.has("navigation.md"), true);
+  assert.equal(sources.has("core/workflows/review.md"), true);
+  assert.equal(sources.has("project-intelligence/technical-domain.md"), true);
+  assert.equal(result.skipped.some((item) => item.reason === "deprecated"), true);
+  assert.equal(result.skipped.some((item) => item.reason === "sensitive-content"), true);
 });

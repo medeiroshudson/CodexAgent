@@ -1,6 +1,6 @@
 {
   "name": "codex-agent",
-  "version": "0.1.0+codex.20260718182211",
+  "version": "0.1.0+codex.20260718210134",
   "description": "Context-aware planning, implementation, testing, research, and review workflows for Codex.",
   "author": {
     "name": "medeiroshudson"
@@ -31,7 +31,8 @@
       "Review this change for correctness and regressions.",
       "Find the relevant project conventions before coding.",
       "Analyze this repository and preview a project-specific Codex setup.",
-      "Review this project knowledge and save it only after showing me a preview."
+      "Review this project knowledge and save it only after showing me a preview.",
+      "Migrate this existing agent context into the native indexed context format."
     ],
     "brandColor": "#101828",
     "composerIcon": "./assets/codex-agent.svg",

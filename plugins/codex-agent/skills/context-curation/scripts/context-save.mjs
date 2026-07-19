@@ -26,6 +26,8 @@ const SECRET_PATTERNS = [
   /\beyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/
 ];
 
+export const containsSensitiveContent = (value) => SECRET_PATTERNS.some((pattern) => pattern.test(String(value)));
+
 const slash = (value) => value.split(path.sep).join("/");
 const unique = (items) => [...new Set(items)];
 const safeText = (value, limit = 300) => String(value).replace(/[\r\n]+/g, " ").replace(/`/g, "'").trim().slice(0, limit);
@@ -182,7 +184,7 @@ export const validateContextProposal = (proposal, { root } = {}) => {
   }
   const combined = JSON.stringify(proposal);
   if (combined.includes("codex-agent:context:start") || combined.includes("codex-agent:context:end")) errors.push("proposal must not contain managed marker text");
-  if (SECRET_PATTERNS.some((pattern) => pattern.test(combined))) errors.push("proposal appears to contain a secret or credential");
+  if (containsSensitiveContent(combined)) errors.push("proposal appears to contain a secret or credential");
 
   if (root && Array.isArray(proposal.evidence)) {
     const projectRoot = fs.realpathSync(path.resolve(root));

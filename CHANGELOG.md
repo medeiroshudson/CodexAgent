@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added a navigation-context migrator with root discovery, metadata conversion, filtering, preview, backups, and native index generation.
 - Added the `context-curation` skill, `/remember` command, and approval-gated `context save` workflow.
 - Added evidence validation, duplicate detection, secret screening, managed updates, backups, and coordinated context/index writes.
 - Added the `project-init` skill and `/init` command.

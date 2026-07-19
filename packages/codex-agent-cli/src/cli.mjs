@@ -1,12 +1,21 @@
 import fs from "node:fs";
 import path from "node:path";
-import { buildContextIndex, diagnoseProject, evaluateRouting, initializeProject, migrateContext, saveContextProposal } from "./core.mjs";
+import {
+  buildContextIndex,
+  diagnoseProject,
+  evaluateRouting,
+  initializeProject,
+  migrateContext,
+  migrateNavigationContext,
+  saveContextProposal
+} from "./core.mjs";
 
 const usage = `Codex Agent CLI
 
 Usage:
   codex-agent init [--root PATH] [--analysis FILE] [--apply | --refresh] [--force] [--json]
   codex-agent migrate --from PATH [--root PATH] [--dry-run] [--force] [--json]
+  codex-agent migrate navigation --from PATH [--root PATH] [--apply] [--force] [--include-templates] [--include-workflows] [--include-navigation] [--json]
   codex-agent doctor [--root PATH] [--json]
   codex-agent context index [--root PATH] [--dry-run] [--json]
   codex-agent context save --proposal FILE [--root PATH] [--apply] [--update] [--json]
@@ -25,6 +34,9 @@ const flags = (args) => ({
   apply: args.includes("--apply"),
   refresh: args.includes("--refresh"),
   update: args.includes("--update"),
+  includeNavigation: args.includes("--include-navigation"),
+  includeTemplates: args.includes("--include-templates"),
+  includeWorkflows: args.includes("--include-workflows"),
   force: args.includes("--force"),
   json: args.includes("--json")
 });
@@ -65,6 +77,13 @@ export const main = async (args) => {
     const result = diagnoseProject(options);
     write(result, options.json);
     if (!result.ok) process.exitCode = 1;
+    return;
+  }
+
+  if (command === "migrate" && subcommand === "navigation") {
+    const result = migrateNavigationContext({ ...options, source: option(args, "--from") });
+    write(result, options.json);
+    if (result.conflicts.length) process.exitCode = 2;
     return;
   }
 

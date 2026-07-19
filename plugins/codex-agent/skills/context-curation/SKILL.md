@@ -1,6 +1,6 @@
 ---
 name: context-curation
-description: Evaluate, preview, and save durable project knowledge into the indexed .agents/context catalog with explicit user approval. Use when a task reveals a reusable architectural decision, constraint, operational procedure, domain concept, or recurring pitfall; when the user asks Codex to remember project knowledge; or when existing context needs an approved update.
+description: Evaluate, preview, save, and migrate durable project knowledge into the indexed .agents/context catalog with explicit user approval. Use when a task reveals a reusable architectural decision, constraint, operational procedure, domain concept, or recurring pitfall; when the user asks Codex to remember project knowledge; when existing context needs an approved update; or when importing a navigation-based Markdown context tree from another agent framework.
 ---
 
 # Context Curation
@@ -34,3 +34,13 @@ If the candidate is a rule that must apply to every task, propose an `AGENTS.md`
 - Rebuild metadata deterministically; never claim that `.agents/context/` loads automatically.
 
 The deterministic writer is `scripts/context-save.mjs`.
+
+## Navigation-context migration
+
+1. Read [the migration policy](references/migration-policy.md).
+2. Preview with `node scripts/navigation-migrate.mjs --from <project-or-context-path> --root <repository>` from this skill directory, or use `codex-agent migrate navigation --from <path> --json` when the matching CLI release is installed. The tool discovers configured and conventional context roots without writing.
+3. Review every `changes`, `skipped`, `conflicts`, transformed reference, manifest provenance, and index diff. Workflows and runtime-specific instructions require manual conversion to skills and are skipped by default.
+4. Obtain explicit approval, then repeat with `--apply`. Use `--force` only after reviewing conflicts; replacements with valid markers preserve manual Markdown outside them. Unmarked conflicts are backed up before full replacement.
+5. Run `codex-agent doctor --root <repository>` and verify that `$context-discovery` can select representative migrated entries.
+
+The deterministic migrator is `scripts/navigation-migrate.mjs`.

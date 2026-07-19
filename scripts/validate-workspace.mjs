@@ -61,6 +61,9 @@ export const validateWorkspace = (root = defaultRoot) => {
   requireFile("scripts/derive-cli-version.mjs");
   requireFile("package-lock.json");
   requireFile("plugins/codex-agent/hooks/hooks.json");
+  requireFile("plugins/codex-agent/commands/migrate-context.md");
+  requireFile("plugins/codex-agent/skills/context-curation/references/migration-policy.md");
+  requireFile("plugins/codex-agent/skills/context-curation/scripts/navigation-migrate.mjs");
 
   if (fs.existsSync(contextProposalSchemaPath)) parseJson(contextProposalSchemaPath, errors);
 
@@ -169,7 +172,7 @@ export const validateWorkspace = (root = defaultRoot) => {
   const agentCount = listFiles(path.join(workspace, "plugins", "codex-agent", "agents")).filter((file) => file.endsWith(".md")).length;
   const commandCount = listFiles(path.join(workspace, "plugins", "codex-agent", "commands")).filter((file) => file.endsWith(".md")).length;
   if (agentCount !== 6) errors.push(`expected 6 plugin agents, found ${agentCount}`);
-  if (commandCount !== 7) errors.push(`expected 7 commands, found ${commandCount}`);
+  if (commandCount !== 8) errors.push(`expected 8 commands, found ${commandCount}`);
 
   const predecessorName = ["Open", "Agents", "Control"].join("");
   const predecessorInitialisms = [["O", "A", "C"].join(""), ["A", "O", "C"].join("")];
