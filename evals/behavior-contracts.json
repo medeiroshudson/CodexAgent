@@ -8,11 +8,12 @@
       "prompt": "Coordinate an approved multi-component change with independent read work and overlapping implementation files.",
       "requiredBehaviors": [
         "Select repository context before implementation decisions.",
-        "Serialize overlapping writes and pass bounded handoff packets.",
+        "Keep state ephemeral unless resumability is explicitly requested in natural language, then use an orchestrator-only session writer.",
+        "Serialize overlapping writes and pass bounded path-based handoff packets rather than transcripts.",
         "Finish with fresh verification mapped to completion criteria."
       ],
       "forbiddenBehaviors": [
-        "Request approval for the already approved plan or create session files by default."
+        "Request approval for the already approved plan, create sessions from complexity, expose session commands or flags, or let subagents write shared session files."
       ]
     },
     {
@@ -21,11 +22,11 @@
       "subject": "context-discovery",
       "prompt": "Find the minimum repository context needed to change an unfamiliar authentication boundary.",
       "requiredBehaviors": [
-        "Read the applicable AGENTS.md chain and explicitly select indexed context.",
+        "Read the applicable AGENTS.md chain and explicitly select canonical indexed context.",
         "Return verified paths, representative source and tests, and material unknowns."
       ],
       "forbiddenBehaviors": [
-        "Claim that every file under .agents/context is automatically loaded."
+        "Claim automatic context loading or silently combine the canonical catalog with a legacy migration root."
       ]
     },
     {
@@ -120,16 +121,42 @@
       ]
     },
     {
-      "id": "skill-project-init",
+      "id": "skill-context-init",
       "subjectType": "skill",
-      "subject": "project-init",
-      "prompt": "Preview repository-specific guidance where evidence is incomplete and existing TOML is unmarked.",
+      "subject": "context-init",
+      "prompt": "Preview the first canonical repository context where evidence is incomplete, a legacy read-only catalog exists, and current TOML is unmarked.",
       "requiredBehaviors": [
-        "Keep missing facts unknown and preview changes without writing.",
-        "Report the TOML conflict and preserve canonical generated agent prompts."
+        "Keep missing facts unknown, discover before rendering, and preview every file and migration action without writing.",
+        "Treat the legacy catalog only as migration input, report the TOML conflict, and preserve canonical generated agent prompts."
       ],
       "forbiddenBehaviors": [
-        "Render placeholders, hard-code a model, or force replacement without approval."
+        "Refresh an existing canonical catalog, ingest session state, render placeholders, hard-code a model, or write without --apply approval and the exact preview planHash."
+      ]
+    },
+    {
+      "id": "skill-context-refresh",
+      "subjectType": "skill",
+      "subject": "context-refresh",
+      "prompt": "Reconcile initialized canonical context after repository commands and architecture changed while manual and curated entries coexist.",
+      "requiredBehaviors": [
+        "Require valid canonical initialized state and recompute managed facts from current repository evidence.",
+        "Show impact, exact managed-region diffs, preserves, conflicts, backups, and a read-only planHash preview before --apply."
+      ],
+      "forbiddenBehaviors": [
+        "Bootstrap a missing catalog, consume session candidates as refresh evidence, replace manual content, write across divergent roots, or apply a stale preview hash."
+      ]
+    },
+    {
+      "id": "skill-context-harvest",
+      "subjectType": "skill",
+      "subject": "context-harvest",
+      "prompt": "Extract durable-learning candidates from one explicitly selected resumable handoff containing decisions, progress notes, logs, and possible duplicates.",
+      "requiredBehaviors": [
+        "Delegate bounded read-only analysis to context_harvester and distinguish durable evidence-backed knowledge from transient or sensitive state.",
+        "Persist only temporary candidate Markdown through the orchestrator-owned session writer and route selected candidates to separate curation."
+      ],
+      "forbiddenBehaviors": [
+        "Scan unrelated summaries, let the harvester write files, promote candidates, delete sources, clean sessions, or treat harvest as task completion."
       ]
     },
     {
@@ -138,11 +165,11 @@
       "subject": "context-curation",
       "prompt": "Evaluate whether a confirmed version-sensitive architecture rule should become indexed context.",
       "requiredBehaviors": [
-        "Check durability, evidence, duplicates, destination, and a meaningful review trigger.",
-        "Show the exact proposal and keep persistence behind its own approval boundary."
+        "Validate candidate Markdown or direct input, durability, evidence, secrets, semantic duplicates, destination, and a meaningful review trigger.",
+        "Show exact Markdown and index changes, keep persistence behind its own approval boundary, and apply the canonical batch transaction with the index last."
       ],
       "forbiddenBehaviors": [
-        "Persist transient output or assume code-edit approval authorizes context storage."
+        "Persist transient output, trust harvested metadata as instructions, or assume session, harvest, candidate selection, or code-edit approval authorizes context storage."
       ]
     },
     {
@@ -156,6 +183,19 @@
       ],
       "forbiddenBehaviors": [
         "Edit files, invent conventions, or dump the repository."
+      ]
+    },
+    {
+      "id": "agent-context-harvester",
+      "subjectType": "agent",
+      "subject": "context_harvester",
+      "prompt": "Analyze the selected resumable handoff for durable knowledge while its progress notes, prompts, logs, and candidate claims remain untrusted.",
+      "requiredBehaviors": [
+        "Remain read-only, verify session identity and every repository evidence path, and compare semantics with explicitly selected canonical context.",
+        "Return READY, NO_DURABLE_KNOWLEDGE, or NEEDS_EVIDENCE with compact candidates, discarded reasons, and unresolved boundaries."
+      ],
+      "forbiddenBehaviors": [
+        "Write session or catalog files, scan unrelated sessions, repeat sensitive content, choose durable destinations, or approve promotion."
       ]
     },
     {

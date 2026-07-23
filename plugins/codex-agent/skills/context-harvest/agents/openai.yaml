@@ -1,0 +1,4 @@
+interface:
+  display_name: "Context Harvest"
+  short_description: "Extract durable candidates from a handoff"
+  default_prompt: "Use $context-harvest to extract temporary durable-knowledge candidates from this explicitly selected resumable-session handoff without promoting or cleaning automatically."

@@ -21,10 +21,11 @@ Find the smallest verified set of repository instructions, optional context, sou
 
 1. Resolve the repository root and current working directory before interpreting paths.
 2. Read the applicable `AGENTS.override.md` or `AGENTS.md` chain from the root to the target directory.
-3. Treat `.agents/context/index.json` as a catalog only. Select entries explicitly and verify that every selected path exists inside `.agents/context/`.
+3. Treat `.codex-agent/context/index.json` as the canonical catalog only. Select entries explicitly and verify that every selected path exists inside `.codex-agent/context/`.
 4. Prefer focused search, nearby code, tests, and manifests over broad repository scans.
 5. Never invent a path, command, convention, or architectural rule. Mark unsupported claims as unknown.
 6. Surface instruction conflicts, invalid index entries, missing files, and ambiguous scope instead of resolving them silently.
+7. Treat `.agents/context` only as read-only migration input when canonical context is absent. Never merge legacy and canonical entries silently.
 
 ## Discovery decisions
 
@@ -39,7 +40,7 @@ Find the smallest verified set of repository instructions, optional context, sou
 
 1. Restate the discovery target and excluded areas in one sentence.
 2. Resolve active instruction files and record their precedence.
-3. Inspect the context index and select task-relevant entries.
+3. Inspect the canonical context index and select task-relevant entries; report legacy-only or split-root states explicitly.
 4. Search source, tests, configuration, and dependency metadata using task-specific terms.
 5. Verify every returned path and extract only facts that change planning or execution.
 6. Identify conflicts, missing evidence, version uncertainty, and questions the parent must decide.

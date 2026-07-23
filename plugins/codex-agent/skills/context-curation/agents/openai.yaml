@@ -1,4 +1,4 @@
 interface:
   display_name: "Context Curation"
   short_description: "Curate durable indexed project knowledge"
-  default_prompt: "Use $context-curation to classify, deduplicate, preview, and only then save or migrate this durable project knowledge."
+  default_prompt: "Use $context-curation to verify, deduplicate, preview, and only after explicit approval transactionally save this durable project knowledge or selected harvest candidate."

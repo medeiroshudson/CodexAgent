@@ -9,7 +9,8 @@ The plugin uses Codex-native boundaries:
 - Focused agents for bounded delegated work.
 - `.codex/agents/*.toml` templates for project-specific sandbox and role configuration.
 - Hooks for optional deterministic lifecycle reminders.
-- `.agents/context/` for explicitly selected team knowledge.
+- `.codex-agent/context/` for versioned, explicitly selected team knowledge.
+- `.codex-agent/sessions/` for ignored resumable handoffs created only after explicit opt-in.
 - A repository marketplace for installation and distribution.
 
 ## Install
@@ -42,30 +43,31 @@ codex plugin list --available --json
 
 Start a new Codex task after installation so the plugin surfaces are loaded cleanly.
 
-## Initialize a project
+## Initialize project context
 
-In a new Codex task opened at the target repository, run `/init` or ask Codex to “use `$project-init` to initialize this repository.” The skill performs read-only context discovery, presents the evidence-backed preview, and requests approval before applying it.
+In a new Codex task opened at the target repository, ask Codex to “use `$context-init` to initialize context for this repository.” The skill performs read-only context discovery, presents the evidence-backed preview, and applies only with matching authority.
 
 For direct CLI use, open a terminal in the target repository and run the published package with `npx`. Analyze the repository and preview the proposed files first (this never writes):
 
 ```bash
-npx --yes @codex-agent/cli@latest init --json
+npx --yes @codex-agent/cli@latest context init --json
 ```
 
 After reviewing the evidence, confidence, unknowns, and diff, apply the generated setup:
 
 ```bash
-npx --yes @codex-agent/cli@latest init --apply
+npx --yes @codex-agent/cli@latest context init --apply --plan-hash <reviewed-plan-hash>
 ```
 
-The initializer discovers the actual package manager, repository commands, languages, frameworks, modules, entrypoints, test setup, CI/CD, security-sensitive paths, and repeated conventions. Every fact in `.codex-agent/analysis.json` carries repository evidence, confidence, and a `detected`, `inferred`, or `unknown` status. Unknown facts are not rendered as placeholders.
+The initializer discovers the actual package manager, repository commands, languages, frameworks, modules, entrypoints, test setup, CI/CD, security-sensitive paths, and repeated conventions. Every fact in `.codex-agent/analysis.json` carries repository evidence, confidence, and a `detected`, `inferred`, or `unknown` status. Unknown facts are not rendered as placeholders. This ignored analysis file is a rebuildable cache; the valid canonical catalog is the durable initialization signal, so a clean clone can run `context refresh` without the cache.
 
 Manual Markdown outside `codex-agent:managed` markers and custom context-index entries are preserved. Existing TOML without managed markers is reported as a conflict because blind merging could create duplicate keys. Review such files before using `--force`; forced replacements are backed up under `.codex-agent/backups/`.
 
 Refresh an existing managed setup after commands or architecture change:
 
 ```bash
-npx --yes @codex-agent/cli@latest init --refresh
+npx --yes @codex-agent/cli@latest context refresh --json
+npx --yes @codex-agent/cli@latest context refresh --apply --plan-hash <reviewed-plan-hash>
 ```
 
 Initialization is optional. Installing the plugin makes its skills available in a new Codex task even when the project has not been initialized. The generated files improve automatic repository guidance and add project agent profiles; they are not a prerequisite for skill routing.
@@ -74,12 +76,14 @@ The generated project structure includes:
 
 ```text
 AGENTS.md
-.agents/context/
+.codex-agent/context/
 .codex/config.toml
 .codex/agents/
 ```
 
-The `$project-init` workflow runs `$context-discovery` before the deterministic analyzer so Codex can review existing guidance and supplement the intermediate analysis with evidence-backed facts. The script remains responsible for validation, rendering, merge, backups, preview, and apply.
+`$context-init` owns the first setup. `$context-refresh` reconciles an already initialized setup after repository facts change. Both run `$context-discovery` before the deterministic analyzer; scripts remain responsible for validation, rendering, managed merge, backups, transaction, preview, and apply.
+
+Apply requires the exact `planHash` from a fresh preview. When initialization migrates `.agents/context`, one umbrella lifecycle journal spans the catalog move and managed-file transaction so a dead local writer can be recovered without accepting a different plan or leaving a half-initialized canonical catalog.
 
 ## Workflows
 
@@ -94,21 +98,23 @@ Invoke skills explicitly with `$` or use natural requests that match their descr
 - `$code-review`
 - `$external-research`
 - `$verification-before-completion`
-- `$project-init`
+- `$context-init`
+- `$context-refresh`
+- `$context-harvest`
 - `$context-curation`
 
-Commands provide short entrypoints: `/init`, `/remember`, `/migrate-context`, `/plan`, `/context`, `/review`, `/test`, and `/doctor`.
+The plugin does not distribute slash-command prompt files. Invoke skills explicitly or describe the intended workflow in natural language. The npm CLI is only the deterministic terminal surface.
 
 ## Context model
 
-Files under `.agents/context/` are not automatically injected into every task. The context index describes optional knowledge, and `$context-discovery` selects only the files relevant to the current request.
+Files under `.codex-agent/context/` are not automatically injected into every task. The context index describes optional knowledge, and `$context-discovery` selects only the files relevant to the current request. Readers may identify a legacy `.agents/context/` catalog for migration, but writers use only the canonical root and block divergent catalogs.
 
-When a completed task reveals a non-obvious and reusable decision, constraint, operation, domain concept, or recurring pitfall, `$context-curation` may offer one optional proposal. It reports the task outcome independently and never saves learned context without explicit approval. Use `/remember` to request this workflow directly.
+When a completed task reveals a non-obvious and reusable decision, constraint, operation, domain concept, or recurring pitfall, `$context-curation` may offer one optional proposal. It reports the task outcome independently and never saves learned context without explicit approval.
 
 Curated knowledge is stored separately from initializer-managed files:
 
 ```text
-.agents/context/
+.codex-agent/context/
 ├── decisions/
 ├── constraints/
 ├── operations/
@@ -146,9 +152,9 @@ npx --yes @codex-agent/cli@latest migrate \
 
 Remove `--dry-run` after reviewing the paths. Existing conflicts are preserved unless `--force` is supplied, in which case backups are created first.
 
-### Migrate OpenAgentsControl context
+### Migrate navigation-based context
 
-To migrate a project context created by [OpenAgentsControl](https://github.com/darrenhinde/OpenAgentsControl), use `/migrate-context` in a new Codex task. The bundled navigation migrator accepts either the old project root or its context directory, recognizes `.oac.json`, `.claude/context`, `context`, and `.opencode/context`, converts source metadata into native index entries, and previews without writing.
+The bundled navigation migrator accepts either an older project root or its context directory, recognizes `.oac.json`, `.claude/context`, `context`, and `.opencode/context`, converts compatible source metadata into native index entries, and previews without writing.
 
 When the matching CLI release is installed, the equivalent terminal command is:
 
@@ -167,11 +173,19 @@ npx --yes @codex-agent/cli@latest migrate navigation \
   --json
 ```
 
-Migrated documents are isolated under `.agents/context/migrated/`; existing native context remains intact. Use `--include-templates`, `--include-workflows`, or `--include-navigation` only when those skipped classes were reviewed. Conflicting replacements require `--force` and create backups.
+Migrated documents are isolated under `.codex-agent/context/migrated/`; existing native context remains intact. Use `--include-templates`, `--include-workflows`, or `--include-navigation` only when those skipped classes were reviewed. Conflicting replacements require `--force` and create backups.
+
+## Resumable sessions
+
+Tasks are ephemeral by default. Explicit natural-language intent such as “keep this task resumable” allows `$agent-orchestration` to create `.codex-agent/sessions/<id>/manifest.json` and `handoff.md`. Complexity, delegation, or a long task never activates persistence by itself.
+
+The parent orchestrator is the sole session writer. It stores a compact objective, scope, phase, verified decisions, selected context paths, artifact hashes, validation, blockers, and next action. It never stores transcripts, full prompts, raw logs, or secrets. Subagents receive bounded handoffs and return deltas through Codex coordination rather than editing the session.
+
+After meaningful work, `$context-harvest` can extract temporary Markdown candidates from an explicitly selected session. The read-only `context_harvester` filters transient state and checks evidence; `$context-curation` still performs deduplication, exact preview, approval, and the transactional write. Harvest never promotes or deletes automatically, and no session command or CLI option exists.
 
 ## Agents and concurrency
 
-The plugin provides eight focused roles: context scout, documentation researcher, architecture analyst, task planner, implementer, test engineer, code reviewer, and build verifier.
+The plugin provides nine focused roles: context scout, context harvester, documentation researcher, architecture analyst, task planner, implementer, test engineer, code reviewer, and build verifier.
 
 Canonical agent instructions live once under `plugins/codex-agent/agents/`. `npm run agents:sync` deterministically generates the embedded CLI module and project TOML templates; `npm run agents:check` prevents prompt drift. The self-contained CLI bundle embeds those definitions, so project initialization through `npx` does not depend on the source workspace.
 
@@ -183,7 +197,7 @@ Models are intentionally not fixed. Project agents inherit the parent Codex mode
 
 The plugin bundles `SessionStart`, `PostToolUse`, and `Stop` reminders. Codex requires users to review and trust non-managed plugin hooks before they run. Inspect them with `/hooks`.
 
-Hooks reinforce workflow discipline but are not a security boundary. Use Codex sandbox, permission mode, and approval policy for actual access control.
+Hooks reinforce workflow discipline but are not a security boundary. They never create or resume sessions, harvest candidates, or promote context. Use Codex sandbox, permission mode, and approval policy for actual access control.
 
 ## Diagnose and validate
 

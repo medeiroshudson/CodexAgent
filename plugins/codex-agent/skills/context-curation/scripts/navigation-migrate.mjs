@@ -3,7 +3,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { containsSensitiveContent, slug } from "./context-save.mjs";
+import { assertWritableContextCatalog } from "../../../scripts/lib/context-catalog.mjs";
+import { assertValidContextIndex } from "../../../scripts/lib/context-index.mjs";
+import { applyContextTransaction, withContextLock } from "../../../scripts/lib/context-transaction.mjs";
+import { assertInside, assertNoSymlink, containsSensitiveContent, resolveProjectRoot, slash } from "../../../scripts/lib/safe-files.mjs";
+import { slug } from "./context-save.mjs";
 
 const PRIORITIES = new Set(["critical", "high", "medium", "low"]);
 const MAX_FILES = 1000;
@@ -12,29 +16,12 @@ const MAX_TOTAL_BYTES = 20 * 1024 * 1024;
 const MANAGED_START = (id) => `<!-- codex-agent:migrated:start ${id} -->`;
 const MANAGED_END = (id) => `<!-- codex-agent:migrated:end ${id} -->`;
 
-const slash = (value) => value.split(path.sep).join("/");
 const unique = (items) => [...new Set(items.filter(Boolean))];
-const timestamp = () => new Date().toISOString().replace(/[:.]/g, "-");
 const safeText = (value, limit = 300) => String(value).replace(/[\r\n]+/g, " ").trim().slice(0, limit);
 
 const readJson = (file, label) => {
   try { return JSON.parse(fs.readFileSync(file, "utf8")); }
   catch (error) { throw new Error(`Invalid ${label}: ${error instanceof Error ? error.message : String(error)}`); }
-};
-
-const assertInside = (root, target, label) => {
-  if (target !== root && !target.startsWith(`${root}${path.sep}`)) throw new Error(`${label} escapes its allowed root`);
-};
-
-const assertNoSymlink = (root, target, label) => {
-  const relative = path.relative(root, target);
-  let current = root;
-  for (const segment of relative.split(path.sep).filter(Boolean)) {
-    current = path.join(current, segment);
-    if (fs.existsSync(current) && fs.lstatSync(current).isSymbolicLink()) {
-      throw new Error(`${label} traverses a symbolic link: ${slash(path.relative(root, current))}`);
-    }
-  }
 };
 
 const hasNavigation = (directory) => fs.existsSync(path.join(directory, "navigation.md"))
@@ -174,15 +161,16 @@ const markdownText = (value) => value
 const firstHeading = (content, fallback) => safeText(content.match(/^#\s+(.+)$/m)?.[1] || fallback, 120);
 const summary = (content, title) => {
   const quote = content.match(/^>\s+(.+)$/m)?.[1];
-  if (quote) return safeText(markdownText(quote), 240);
+  const quoted = quote ? safeText(markdownText(quote), 240) : "";
+  if (quoted.length >= 10) return quoted;
   const paragraphs = content.split(/\n\s*\n/).map(markdownText).filter((value) => value && value !== title && value.length >= 10);
   return safeText(paragraphs[0] || `${title} migrated project context.`, 240);
 };
 
 const rewriteContent = (content) => content
-  .replace(/\[([^\]]+)\]\([^)]*navigation\.md(?:#[^)]*)?\)/gi, "$1 (catalog: `.agents/context/index.json`)")
-  .replace(/@?(?:\.opencode|\.claude)\/context\//g, ".agents/context/migrated/")
-  .replace(/`(?:\.opencode|\.claude)\/context`/g, "`.agents/context/migrated`")
+  .replace(/\[([^\]]+)\]\([^)]*navigation\.md(?:#[^)]*)?\)/gi, "$1 (catalog: `.codex-agent/context/index.json`)")
+  .replace(/@?(?:\.opencode|\.claude)\/context\//g, ".codex-agent/context/migrated/")
+  .replace(/`(?:\.opencode|\.claude)\/context`/g, "`.codex-agent/context/migrated`")
   .trim();
 
 const entryTags = ({ relative, metadata, title }) => unique([
@@ -206,50 +194,16 @@ const mergeManaged = (current, id, managed, force) => {
   return force ? { status: "update", content: `${managed}\n`, backup: true } : { status: "conflict", content: `${managed}\n`, backup: false };
 };
 
-const readTargetIndex = (indexPath, contextRoot) => {
-  if (!fs.existsSync(indexPath)) return { version: 1, entries: [] };
-  const index = readJson(indexPath, "target context index");
-  if (!index || typeof index !== "object" || !Array.isArray(index.entries)) throw new Error("Invalid target context index: entries must be an array");
-  const ids = new Set();
-  const paths = new Set();
-  for (const entry of index.entries) {
-    if (ids.has(entry.id)) throw new Error(`Invalid target context index: duplicate id ${entry.id}`);
-    if (paths.has(entry.path)) throw new Error(`Invalid target context index: duplicate path ${entry.path}`);
-    ids.add(entry.id);
-    paths.add(entry.path);
-    const target = path.resolve(contextRoot, entry.path || "");
-    assertInside(contextRoot, target, `Target context entry ${entry.path}`);
-    if (!fs.existsSync(target)) throw new Error(`Invalid target context index: missing path ${entry.path}`);
-  }
-  return index;
-};
-
 const diff = (before, after) => {
   if (before === after) return "";
   const oldLines = (before ?? "").split("\n");
   const newLines = after.split("\n");
   let prefix = 0;
   while (prefix < oldLines.length && prefix < newLines.length && oldLines[prefix] === newLines[prefix]) prefix++;
-  return [`@@ line ${prefix + 1} @@`, ...oldLines.slice(prefix, prefix + 60).map((line) => `- ${line}`), ...newLines.slice(prefix, prefix + 60).map((line) => `+ ${line}`)].join("\n");
+  return [`@@ line ${prefix + 1} @@`, ...oldLines.slice(prefix).map((line) => `- ${line}`), ...newLines.slice(prefix).map((line) => `+ ${line}`)].join("\n");
 };
 
-const restore = (snapshots, indexPath, priorIndexContent) => {
-  for (const snapshot of [...snapshots].reverse()) {
-    if (snapshot.before === null) {
-      if (fs.existsSync(snapshot.destination)) fs.unlinkSync(snapshot.destination);
-    } else {
-      fs.mkdirSync(path.dirname(snapshot.destination), { recursive: true });
-      fs.writeFileSync(snapshot.destination, snapshot.before);
-    }
-  }
-  if (priorIndexContent === null) {
-    if (fs.existsSync(indexPath)) fs.unlinkSync(indexPath);
-  } else {
-    fs.writeFileSync(indexPath, priorIndexContent);
-  }
-};
-
-export const migrateNavigationContext = ({
+const prepareNavigationContext = ({
   root,
   source,
   apply = false,
@@ -258,9 +212,10 @@ export const migrateNavigationContext = ({
   includeTemplates = false,
   includeWorkflows = false
 }) => {
-  const projectRoot = fs.realpathSync(path.resolve(root));
+  const projectRoot = resolveProjectRoot(root);
   const discovery = discoverNavigationContext({ source });
-  const contextRoot = path.join(projectRoot, ".agents", "context");
+  const writableCatalog = assertWritableContextCatalog({ root: projectRoot });
+  const contextRoot = writableCatalog.contextRoot;
   const destinationRoot = path.join(contextRoot, "migrated");
   assertNoSymlink(projectRoot, contextRoot, "Target context root");
   const sourceWalk = walkMarkdown(discovery.contextRoot);
@@ -271,7 +226,9 @@ export const migrateNavigationContext = ({
     const relative = slash(path.relative(discovery.contextRoot, sourceFile));
     const original = fs.readFileSync(sourceFile, "utf8");
     const metadata = parseMetadata(original);
-    const reason = classify({ relative, content: metadata.content, includeNavigation, includeTemplates, includeWorkflows });
+    const reason = containsSensitiveContent(original)
+      ? "sensitive-content"
+      : classify({ relative, content: metadata.content, includeNavigation, includeTemplates, includeWorkflows });
     if (reason) {
       skipped.push({ source: relative, reason });
       continue;
@@ -301,16 +258,32 @@ export const migrateNavigationContext = ({
   }
 
   const indexPath = path.join(contextRoot, "index.json");
-  const targetIndex = readTargetIndex(indexPath, contextRoot);
+  const targetIndex = writableCatalog.index;
   const priorIndexContent = fs.existsSync(indexPath) ? fs.readFileSync(indexPath, "utf8") : null;
   const changes = [];
   const conflicts = [];
   const migrationEntries = [];
+  const candidateIdOwners = new Map();
+  for (const candidate of candidates) {
+    const owners = candidateIdOwners.get(candidate.id) ?? new Set();
+    owners.add(candidate.destinationRelative);
+    candidateIdOwners.set(candidate.id, owners);
+  }
   for (const candidate of candidates) {
     assertInside(destinationRoot, candidate.destination, `Migration destination ${candidate.destinationRelative}`);
     assertNoSymlink(projectRoot, candidate.destination, "Migration destination");
     const current = fs.existsSync(candidate.destination) ? fs.readFileSync(candidate.destination, "utf8") : null;
     const merge = mergeManaged(current, candidate.id, candidate.managed, force);
+    if (candidateIdOwners.get(candidate.id).size > 1) {
+      conflicts.push(candidate.destinationRelative);
+      changes.push({
+        source: candidate.source,
+        path: candidate.destinationRelative,
+        status: "conflict",
+        diff: "Migration candidates generate the same context ID and must be renamed before migration."
+      });
+      continue;
+    }
     const idOwner = targetIndex.entries.find((entry) => entry.id === candidate.id && entry.path !== candidate.destinationRelative);
     const pathOwner = targetIndex.entries.find((entry) => entry.path === candidate.destinationRelative && entry.id !== candidate.id);
     if (idOwner || pathOwner) {
@@ -358,6 +331,11 @@ export const migrateNavigationContext = ({
       ...migrationEntries
     ].sort((left, right) => left.path.localeCompare(right.path))
   };
+  assertValidContextIndex(nextIndex, {
+    root: projectRoot,
+    contextRoot,
+    pendingPaths: migrationEntries.map((entry) => entry.path)
+  });
   const indexContent = `${JSON.stringify(nextIndex, null, 2)}\n`;
   const result = {
     root: projectRoot,
@@ -373,41 +351,43 @@ export const migrateNavigationContext = ({
     skipped,
     conflicts: unique(conflicts),
     backedUp: [],
-    index: { path: ".agents/context/index.json", entries: nextIndex.entries.length, diff: diff(priorIndexContent, indexContent) },
-    applied: false
+    index: { path: ".codex-agent/context/index.json", entries: nextIndex.entries.length, diff: diff(priorIndexContent, indexContent) },
+    applied: false,
+    transaction: {
+      documents: changes.filter((change) => change.status !== "unchanged" && change.status !== "conflict")
+        .map((change) => ({ path: change.path, content: change.content })),
+      indexContent,
+      backupPaths: [
+        ...changes.filter((change) => change.backup && change.before !== null).map((change) => change.path),
+        ...(changes.some((change) => change.backup) && priorIndexContent !== null ? ["index.json"] : [])
+      ]
+    },
+    unchanged: changes.every((change) => ["unchanged", "conflict"].includes(change.status)) && priorIndexContent === indexContent
   };
-  if (!apply || result.conflicts.length) return result;
-
-  const writable = changes.filter((change) => change.status !== "unchanged");
-  const snapshots = writable.map((change) => ({ destination: change.destination, before: change.before }));
-  if (writable.some((change) => change.backup)) {
-    const backupRoot = path.join(projectRoot, ".codex-agent", "backups", timestamp());
-    for (const change of writable.filter((item) => item.backup && item.before !== null)) {
-      const backup = path.join(backupRoot, ...change.path.split("/"));
-      fs.mkdirSync(path.dirname(backup), { recursive: true });
-      fs.writeFileSync(backup, change.before);
-      result.backedUp.push(slash(path.relative(projectRoot, backup)));
-    }
-    if (priorIndexContent !== null) {
-      const backup = path.join(backupRoot, ".agents", "context", "index.json");
-      fs.mkdirSync(path.dirname(backup), { recursive: true });
-      fs.writeFileSync(backup, priorIndexContent);
-      result.backedUp.push(slash(path.relative(projectRoot, backup)));
-    }
-  }
-  try {
-    for (const change of writable) {
-      fs.mkdirSync(path.dirname(change.destination), { recursive: true });
-      fs.writeFileSync(change.destination, change.content);
-    }
-    fs.mkdirSync(path.dirname(indexPath), { recursive: true });
-    fs.writeFileSync(indexPath, indexContent);
-  } catch (error) {
-    restore(snapshots, indexPath, priorIndexContent);
-    throw error;
-  }
-  result.applied = true;
   return result;
+};
+
+const publicNavigationResult = ({ transaction, unchanged, ...result }) => result;
+
+export const migrateNavigationContext = (options) => {
+  const preview = prepareNavigationContext(options);
+  if (!options.apply || preview.conflicts.length) return publicNavigationResult(preview);
+  return withContextLock({ root: preview.root }, () => {
+    const prepared = prepareNavigationContext({ ...options, root: preview.root, apply: true });
+    if (prepared.conflicts.length) return publicNavigationResult(prepared);
+    if (!prepared.unchanged) {
+      const transaction = applyContextTransaction({
+        root: prepared.root,
+        documents: prepared.transaction.documents,
+        indexContent: prepared.transaction.indexContent,
+        backupPaths: prepared.transaction.backupPaths,
+        lock: false
+      });
+      prepared.backedUp = transaction.backedUp;
+    }
+    prepared.applied = true;
+    return publicNavigationResult(prepared);
+  });
 };
 
 const option = (args, name, fallback) => {

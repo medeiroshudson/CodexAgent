@@ -112,14 +112,38 @@
     {
       "id": "initialize-project",
       "kind": "positive",
-      "prompt": "Analyze this existing repository and preview evidence-backed Codex guidance and native agent profiles before creating files.",
-      "expectedSkill": "project-init"
+      "prompt": "This repository has no canonical Codex context yet. Analyze it and preview the first evidence-backed guidance, indexed catalog, and native agent profiles without writing.",
+      "expectedSkill": "context-init"
+    },
+    {
+      "id": "initialize-from-legacy-context",
+      "kind": "positive",
+      "prompt": "Create the first canonical Codex context for this repository, treating the existing legacy context tree only as read-only migration input and previewing every relocation first.",
+      "expectedSkill": "context-init"
     },
     {
       "id": "refresh-project-guidance",
       "kind": "positive",
       "prompt": "Refresh the managed Codex setup after our stack and validation commands changed, preserving manual content and showing conflicts.",
-      "expectedSkill": "project-init"
+      "expectedSkill": "context-refresh"
+    },
+    {
+      "id": "refresh-canonical-context",
+      "kind": "positive",
+      "prompt": "Reconcile the initialized canonical context catalog with current repository evidence, showing affected files, exact diffs, preserves, and backups before any write.",
+      "expectedSkill": "context-refresh"
+    },
+    {
+      "id": "harvest-resumable-handoff",
+      "kind": "positive",
+      "prompt": "Inspect this explicitly selected resumable-session handoff and extract temporary evidence-backed decisions, constraints, operations, domain rules, and pitfalls without promoting or cleaning anything.",
+      "expectedSkill": "context-harvest"
+    },
+    {
+      "id": "harvest-session-candidates",
+      "kind": "positive",
+      "prompt": "Use the named session handoff and its verified repository evidence to produce compact candidate Markdown through the orchestrator-owned session writer, leaving durable context unchanged.",
+      "expectedSkill": "context-harvest"
     },
     {
       "id": "curate-context",
@@ -180,10 +204,28 @@
       "expectedDisposition": "no-skill"
     },
     {
-      "id": "negative-no-project-init",
+      "id": "negative-no-context-bootstrap",
       "kind": "negative",
-      "prompt": "Change one existing validator function using the repository setup already present; do not regenerate project guidance.",
-      "excludedSkills": ["project-init"]
+      "prompt": "Change one existing validator function using the canonical repository setup already present; do not initialize or refresh project context.",
+      "excludedSkills": ["context-init", "context-refresh"]
+    },
+    {
+      "id": "negative-init-existing-canonical",
+      "kind": "negative",
+      "prompt": "The canonical context catalog is already initialized; update its managed facts rather than creating the first project context again.",
+      "excludedSkills": ["context-init"]
+    },
+    {
+      "id": "negative-refresh-uninitialized",
+      "kind": "negative",
+      "prompt": "This repository has no canonical context catalog yet, so do not run a refresh operation that assumes initialized state.",
+      "excludedSkills": ["context-refresh"]
+    },
+    {
+      "id": "negative-harvest-without-session",
+      "kind": "negative",
+      "prompt": "Summarize the supplied conversation only; there is no explicitly selected resumable handoff and no request to create durable knowledge candidates.",
+      "excludedSkills": ["context-harvest", "context-curation"]
     },
     {
       "id": "negative-read-only-no-verification",
@@ -253,11 +295,26 @@
       "expectedSkills": ["code-review", "external-research"]
     },
     {
-      "id": "overlap-project-init-discovery",
+      "id": "overlap-context-init-discovery",
       "kind": "overlap",
-      "prompt": "Initialize repository-specific Codex guidance after first discovering instructions, architecture, commands, tests, and context entries.",
-      "expectedSkill": "project-init",
-      "expectedSkills": ["project-init", "context-discovery"]
+      "prompt": "Initialize the first canonical repository context after discovering instructions, architecture, commands, tests, evidence, and any legacy migration state.",
+      "expectedSkill": "context-init",
+      "expectedSkills": ["context-init", "context-discovery"]
+    },
+    {
+      "id": "overlap-context-refresh-discovery",
+      "kind": "overlap",
+      "prompt": "Refresh initialized canonical guidance after explicitly discovering current repository evidence and selecting only relevant indexed context.",
+      "expectedSkill": "context-refresh",
+      "expectedSkills": ["context-refresh", "context-discovery"]
+    },
+    {
+      "id": "overlap-harvest-curation",
+      "kind": "overlap",
+      "prompt": "Extract candidates from the selected resumable handoff, then separately curate only my selected candidates with an exact durable preview and approval gate.",
+      "expectedSkill": "context-harvest",
+      "expectedSkills": ["context-harvest", "context-curation"],
+      "expectedDisposition": "save-after-approval"
     },
     {
       "id": "overlap-verify-context-candidate",

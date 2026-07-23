@@ -47,16 +47,54 @@ test("published tarball runs without the source workspace", () => {
   const executable = path.join(target, "package", "dist", "codex-agent.mjs");
   const help = run(process.execPath, [executable, "help"], { cwd: target });
   assert.equal(help.status, 0, help.stderr);
-  assert.match(help.stdout, /codex-agent init/);
+  assert.match(help.stdout, /codex-agent context <command>/);
+  assert.doesNotMatch(help.stdout, /codex-agent init \[/);
+
+  const contextHelp = run(process.execPath, [executable, "context"], { cwd: target });
+  assert.equal(contextHelp.status, 0, contextHelp.stderr);
+  assert.match(contextHelp.stdout, /codex-agent context init/);
+  assert.match(contextHelp.stdout, /codex-agent context refresh/);
+
+  const removedInit = run(process.execPath, [executable, "init"], { cwd: target });
+  assert.equal(removedInit.status, 1);
+  assert.match(removedInit.stderr, /Unknown command: init/);
+
+  const removedRefreshFlag = run(process.execPath, [executable, "context", "refresh", "--refresh"], { cwd: target });
+  assert.equal(removedRefreshFlag.status, 1);
+  assert.match(removedRefreshFlag.stderr, /Unknown option for context refresh: --refresh/);
+
+  const missingRootValue = run(process.execPath, [executable, "context", "init", "--root", "--json"], { cwd: target });
+  assert.equal(missingRootValue.status, 1);
+  assert.match(missingRootValue.stderr, /--root requires a value/);
+
+  const unknownContext = run(process.execPath, [executable, "context", "unknown"], { cwd: target });
+  assert.equal(unknownContext.status, 1);
+  assert.match(unknownContext.stderr, /Unknown context command: unknown/);
 
   const fixture = path.join(target, "fixture");
   fs.mkdirSync(fixture);
   fs.writeFileSync(path.join(fixture, "package.json"), JSON.stringify({ name: "fixture" }));
-  const init = run(process.execPath, [executable, "init", "--json"], { cwd: fixture });
+  const init = run(process.execPath, [executable, "context", "init", "--json"], { cwd: fixture });
   assert.equal(init.status, 0, init.stderr);
   const result = JSON.parse(init.stdout);
+  assert.equal(result.schemaVersion, 1);
+  assert.equal(result.operation, "context.init");
   assert.equal(result.mode, "preview");
+  assert.equal(result.applied, false);
   assert.equal(fs.realpathSync(result.root), fs.realpathSync(fixture));
+
+  const appliedInit = run(process.execPath, [
+    executable, "context", "init", "--apply", "--plan-hash", result.planHash, "--json"
+  ], { cwd: fixture });
+  assert.equal(appliedInit.status, 0, appliedInit.stderr);
+  const appliedInitResult = JSON.parse(appliedInit.stdout);
+  assert.equal(appliedInitResult.operation, "context.init");
+  assert.equal(appliedInitResult.mode, "apply");
+  assert.equal(appliedInitResult.applied, true);
+  assert.ok(Array.isArray(appliedInitResult.backups));
+  const installedProfiles = fs.readdirSync(path.join(fixture, ".codex", "agents")).filter((name) => name.endsWith(".toml"));
+  assert.equal(installedProfiles.length, agentProfiles.length);
+  assert.match(fs.readFileSync(path.join(fixture, ".codex", "agents", "context_scout.toml"), "utf8"), /developer_instructions/);
 
   const proposalPath = path.join(target, "proposal.json");
   fs.writeFileSync(proposalPath, JSON.stringify({
@@ -80,7 +118,7 @@ test("published tarball runs without the source workspace", () => {
   assert.equal(contextApply.status, 0, contextApply.stderr);
   const contextResult = JSON.parse(contextApply.stdout);
   assert.equal(contextResult.applied, true);
-  assert.equal(fs.existsSync(path.join(fixture, ".agents", "context", contextResult.path)), true);
+  assert.equal(fs.existsSync(path.join(fixture, ".codex-agent", "context", contextResult.path)), true);
 
   const navigationSource = path.join(target, "navigation-source");
   const navigationContext = path.join(navigationSource, ".opencode", "context");
@@ -104,12 +142,25 @@ test("published tarball runs without the source workspace", () => {
   assert.equal(migrationApply.status, 0, migrationApply.stderr);
   const migrationResult = JSON.parse(migrationApply.stdout);
   assert.equal(migrationResult.applied, true);
-  assert.equal(fs.existsSync(path.join(fixture, ".agents", "context", migrationResult.changes[0].path)), true);
+  assert.equal(fs.existsSync(path.join(fixture, ".codex-agent", "context", migrationResult.changes[0].path)), true);
 
-  const appliedInit = run(process.execPath, [executable, "init", "--apply", "--json"], { cwd: fixture });
-  assert.equal(appliedInit.status, 0, appliedInit.stderr);
-  assert.equal(JSON.parse(appliedInit.stdout).applied, true);
-  const installedProfiles = fs.readdirSync(path.join(fixture, ".codex", "agents")).filter((name) => name.endsWith(".toml"));
-  assert.equal(installedProfiles.length, agentProfiles.length);
-  assert.match(fs.readFileSync(path.join(fixture, ".codex", "agents", "context_scout.toml"), "utf8"), /developer_instructions/);
+  const duplicateInit = run(process.execPath, [executable, "context", "init", "--json"], { cwd: fixture });
+  assert.equal(duplicateInit.status, 1);
+  assert.match(duplicateInit.stderr, /context refresh/);
+
+  const refreshPreview = run(process.execPath, [executable, "context", "refresh", "--json"], { cwd: fixture });
+  assert.equal(refreshPreview.status, 0, refreshPreview.stderr);
+  const refreshPreviewResult = JSON.parse(refreshPreview.stdout);
+  assert.equal(refreshPreviewResult.operation, "context.refresh");
+  assert.equal(refreshPreviewResult.mode, "preview");
+  assert.equal(refreshPreviewResult.applied, false);
+
+  const refreshApply = run(process.execPath, [
+    executable, "context", "refresh", "--apply", "--plan-hash", refreshPreviewResult.planHash, "--json"
+  ], { cwd: fixture });
+  assert.equal(refreshApply.status, 0, refreshApply.stderr);
+  const refreshApplyResult = JSON.parse(refreshApply.stdout);
+  assert.equal(refreshApplyResult.operation, "context.refresh");
+  assert.equal(refreshApplyResult.mode, "apply");
+  assert.equal(refreshApplyResult.applied, true);
 });

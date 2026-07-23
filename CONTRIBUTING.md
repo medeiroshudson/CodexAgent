@@ -40,8 +40,10 @@ See [docs/releasing-cli.md](docs/releasing-cli.md) for initial npm setup and the
 
 - Keep skill frontmatter limited to `name` and `description`.
 - Keep canonical agent prompts under `plugins/codex-agent/agents/`; run `npm run agents:sync` after editing them and never edit generated TOML or ESM profiles directly.
-- Keep commands thin and put workflows in skills.
+- Do not add plugin `commands/*.md`; use skills for portable interactive workflows and keep the npm CLI deterministic.
 - Put detailed skill material one level below `references/`.
 - Do not add a custom installer for behavior already provided by the Codex marketplace.
 - Keep hooks optional, fast, cross-platform, and non-destructive.
 - Add routing fixtures for new skills and deterministic tests for new scripts.
+- Keep `.codex-agent/context/` versionable while sessions, backups, locks, transactions, and analysis remain ignored.
+- Do not add public session commands or flags; resumable state is an explicit opt-in owned by `$agent-orchestration`.

@@ -1,4 +1,4 @@
 interface:
   display_name: "Agent Orchestration"
   short_description: "Coordinate complex repository changes end to end"
-  default_prompt: "Use $agent-orchestration to coordinate this multi-component repository change from context discovery through fresh verification."
+  default_prompt: "Use $agent-orchestration to coordinate this multi-component repository change from explicit context discovery through fresh verification, keeping session state ephemeral unless I explicitly request resumability."

@@ -3,18 +3,31 @@ import path from "node:path";
 import {
   analyzeProject,
   agentProfiles,
-  initializeProject,
+  initializeContext,
+  refreshContext,
   renderProjectFiles,
   validateAnalysisEvidence,
+  validateAnalysisConsistency,
   validateProjectAnalysis
-} from "../../../plugins/codex-agent/skills/project-init/scripts/project-init.mjs";
+} from "../../../plugins/codex-agent/scripts/context-project.mjs";
+import {
+  assertWritableContextCatalog,
+  getReadableContextCatalog,
+  resolveContextCatalog
+} from "../../../plugins/codex-agent/scripts/lib/context-catalog.mjs";
 import {
   buildContextIndex,
   normalizeContextProposal,
+  prepareContextIndex,
   renderContextProposal,
   saveContextProposal,
   validateContextProposal
 } from "../../../plugins/codex-agent/skills/context-curation/scripts/context-save.mjs";
+import {
+  applyContextTransaction,
+  withContextLock
+} from "../../../plugins/codex-agent/scripts/lib/context-transaction.mjs";
+import { containsSensitiveContent } from "../../../plugins/codex-agent/scripts/lib/safe-files.mjs";
 import {
   discoverNavigationContext,
   migrateNavigationContext
@@ -25,13 +38,16 @@ export {
   agentProfiles,
   buildContextIndex,
   discoverNavigationContext,
-  initializeProject,
+  initializeContext,
   migrateNavigationContext,
   normalizeContextProposal,
+  prepareContextIndex,
   renderContextProposal,
   renderProjectFiles,
+  refreshContext,
   saveContextProposal,
   validateAnalysisEvidence,
+  validateAnalysisConsistency,
   validateContextProposal,
   validateProjectAnalysis
 };
@@ -50,9 +66,7 @@ export const listFiles = (root) => {
   return files.sort();
 };
 
-const timestamp = () => new Date().toISOString().replace(/[:.]/g, "-");
-
-export const migrateContext = ({ root, source, dryRun = false, force = false }) => {
+const prepareContextMigration = ({ root, source, dryRun = false, force = false }) => {
   if (!source) throw new Error("migrate requires --from PATH");
   const projectRoot = path.resolve(root);
   const sourceRoot = path.resolve(source);
@@ -62,9 +76,14 @@ export const migrateContext = ({ root, source, dryRun = false, force = false }) 
     .filter((file) => file.endsWith(".md"));
   if (!sourceFiles.length) throw new Error("Migration source contains no Markdown context files.");
 
-  const destinationRoot = path.join(projectRoot, ".agents", "context", "imported");
-  const backupRoot = path.join(projectRoot, ".codex-agent", "backups", timestamp());
-  const result = { imported: [], unchanged: [], conflicts: [], backedUp: [], dryRun };
+  const writableCatalog = assertWritableContextCatalog({ root: projectRoot });
+  const catalogProjectRoot = writableCatalog.root;
+  const contextRoot = writableCatalog.contextRoot;
+  if (!contextRoot) throw new Error("Writable context catalog did not resolve a destination root.");
+  const destinationRoot = path.join(contextRoot, "imported");
+  const result = { imported: [], unchanged: [], conflicts: [], backedUp: [], dryRun, applied: false };
+  const documents = [];
+  const backupPaths = [];
 
   for (const sourceFile of sourceFiles) {
     const relative = fs.statSync(sourceRoot).isDirectory()
@@ -72,40 +91,64 @@ export const migrateContext = ({ root, source, dryRun = false, force = false }) 
       : path.basename(sourceFile);
     const destination = path.join(destinationRoot, relative);
     const content = fs.readFileSync(sourceFile);
+    if (containsSensitiveContent(content.toString("utf8"))) {
+      throw new Error(`Migration source appears to contain a secret or credential: ${sourceFile}`);
+    }
 
     if (!fs.existsSync(destination)) {
-      result.imported.push(path.relative(projectRoot, destination));
-      if (!dryRun) {
-        fs.mkdirSync(path.dirname(destination), { recursive: true });
-        fs.writeFileSync(destination, content);
-      }
+      result.imported.push(path.relative(catalogProjectRoot, destination));
+      documents.push({ path: path.relative(contextRoot, destination).split(path.sep).join("/"), content: content.toString("utf8") });
       continue;
     }
 
     if (content.equals(fs.readFileSync(destination))) {
-      result.unchanged.push(path.relative(projectRoot, destination));
+      result.unchanged.push(path.relative(catalogProjectRoot, destination));
       continue;
     }
 
     if (!force) {
-      result.conflicts.push(path.relative(projectRoot, destination));
+      result.conflicts.push(path.relative(catalogProjectRoot, destination));
       continue;
     }
 
-    const backup = path.join(backupRoot, path.relative(projectRoot, destination));
-    result.backedUp.push(path.relative(projectRoot, backup));
-    result.imported.push(path.relative(projectRoot, destination));
-    if (!dryRun) {
-      fs.mkdirSync(path.dirname(backup), { recursive: true });
-      fs.copyFileSync(destination, backup);
-      fs.writeFileSync(destination, content);
-    }
+    result.imported.push(path.relative(catalogProjectRoot, destination));
+    const documentPath = path.relative(contextRoot, destination).split(path.sep).join("/");
+    documents.push({ path: documentPath, content: content.toString("utf8") });
+    backupPaths.push(documentPath);
   }
 
-  if (!dryRun && fs.existsSync(path.join(projectRoot, ".agents", "context"))) {
-    buildContextIndex({ root: projectRoot });
-  }
-  return result;
+  const index = result.conflicts.length
+    ? null
+    : prepareContextIndex({ root: catalogProjectRoot, pendingDocuments: documents });
+  return {
+    result,
+    projectRoot: catalogProjectRoot,
+    documents,
+    index,
+    backupPaths: [
+      ...backupPaths,
+      ...(index && fs.existsSync(index.path) ? ["index.json"] : [])
+    ]
+  };
+};
+
+export const migrateContext = (options) => {
+  const preview = prepareContextMigration(options);
+  if (options.dryRun || preview.result.conflicts.length) return preview.result;
+  return withContextLock({ root: preview.projectRoot }, () => {
+    const prepared = prepareContextMigration({ ...options, root: preview.projectRoot });
+    if (prepared.result.conflicts.length) return prepared.result;
+    const transaction = applyContextTransaction({
+      root: prepared.projectRoot,
+      documents: prepared.documents,
+      indexContent: prepared.index.content,
+      backupPaths: prepared.backupPaths,
+      lock: false
+    });
+    prepared.result.backedUp = transaction.backedUp;
+    prepared.result.applied = true;
+    return prepared.result;
+  });
 };
 
 const check = (checks, name, ok, detail) => checks.push({ name, ok: Boolean(ok), detail });
@@ -151,9 +194,18 @@ export const diagnoseProject = ({ root }) => {
     check(checks, "project-agents", profiles.length === agentProfiles.length, `${profiles.length}/${agentProfiles.length} profiles in ${agents}`);
   }
 
-  const contextIndex = path.join(projectRoot, ".agents", "context", "index.json");
-  check(checks, "context-index", fs.existsSync(contextIndex), contextIndex);
-  if (fs.existsSync(contextIndex)) {
+  const resolvedCatalog = resolveContextCatalog({ root: projectRoot });
+  check(checks, "context-catalog", resolvedCatalog.state === "canonical-only", resolvedCatalog.state);
+  let readableCatalog = null;
+  try {
+    readableCatalog = getReadableContextCatalog({ root: projectRoot });
+  } catch (error) {
+    check(checks, "context-readable", false, error instanceof Error ? error.message : String(error));
+  }
+  const contextIndex = readableCatalog?.indexPath
+    ?? (readableCatalog?.root ? path.join(readableCatalog.root, "index.json") : null);
+  check(checks, "context-index", Boolean(contextIndex && fs.existsSync(contextIndex)), contextIndex ?? "context index not found");
+  if (contextIndex && fs.existsSync(contextIndex)) {
     const parsed = parseJson(contextIndex);
     check(checks, "context-json", !parsed.error, parsed.error || `${parsed.value.entries?.length ?? 0} entries`);
     const contextRoot = path.dirname(contextIndex);

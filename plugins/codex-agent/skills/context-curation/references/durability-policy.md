@@ -15,7 +15,7 @@ Save knowledge when it is reusable across future tasks, non-obvious, stable, evi
 - Put instructions that must always apply in `AGENTS.md` after separate approval.
 - Put executable invariants in code or tests when those are the authoritative expression.
 - Put reusable procedures for Codex itself in a skill.
-- Keep temporary state in the current task only.
+- Keep resumable task state and unapproved candidates in `.codex-agent/sessions`; keep ephemeral state only in the current task.
 
 ## Discard
 
@@ -33,3 +33,5 @@ Require at least medium confidence and one valid repository evidence path. A use
 ## Prompt threshold
 
 Prompt only when future rediscovery cost is material. Present at most one grouped proposal after completing the primary task. Do not delay or weaken the completion report when the user declines.
+
+Candidate creation and selection are not persistence authority. Revalidate harvested evidence and duplicate status at curation time because the repository or catalog may have changed since extraction.

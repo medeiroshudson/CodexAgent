@@ -1,6 +1,6 @@
 {
   "name": "codex-agent",
-  "version": "0.1.0+codex.20260718210134",
+  "version": "0.1.0+codex.20260723024700",
   "description": "Context-aware agent orchestration, planning, implementation, testing, research, review, and verification workflows for Codex.",
   "author": {
     "name": "medeiroshudson"
@@ -19,7 +19,7 @@
   "interface": {
     "displayName": "Codex Agent",
     "shortDescription": "Context-aware agent workflows for Codex",
-    "longDescription": "Coordinate complex repository changes, discover and curate project context, plan and decompose work, delegate focused tasks, implement incrementally, generate tests, research external APIs, review risks, and verify results with fresh evidence.",
+    "longDescription": "Coordinate complex repository changes, initialize and explicitly select canonical project context, optionally preserve resumable Markdown handoffs, curate durable knowledge behind approval, delegate focused tasks, implement incrementally, review risks, and verify results with fresh evidence.",
     "developerName": "medeiroshudson",
     "category": "Developer Tools",
     "capabilities": [
@@ -31,8 +31,10 @@
       "Use $agent-orchestration to coordinate this complex repository change from context discovery through fresh verification.",
       "Use $code-review to return evidence-backed correctness, security, compatibility, and test findings without editing.",
       "Use $context-discovery to find the smallest verified repository context packet before implementation.",
-      "Use $project-init to preview evidence-backed Codex guidance and native agent profiles for this repository.",
-      "Use $context-curation to deduplicate and preview this durable project knowledge before saving it.",
+      "Use $context-init to preview the first evidence-backed canonical Codex context and native agent profiles for this repository.",
+      "Use $context-refresh to preview reconciliation of initialized canonical context with current repository evidence.",
+      "Use $context-harvest to extract temporary durable-knowledge candidates from an explicitly selected resumable handoff without automatic promotion.",
+      "Use $context-curation to verify, deduplicate, and preview this durable project knowledge before an explicitly approved transactional write.",
       "Use $context-curation to preview a reviewed navigation-context migration into the native indexed format."
     ],
     "brandColor": "#101828",

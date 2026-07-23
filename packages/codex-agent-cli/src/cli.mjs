@@ -5,42 +5,91 @@ import {
   diagnoseProject,
   evaluateBehaviorContracts,
   evaluateRouting,
-  initializeProject,
+  initializeContext,
   migrateContext,
   migrateNavigationContext,
+  refreshContext,
   saveContextProposal
 } from "./core.mjs";
 
 const usage = `Codex Agent CLI
 
 Usage:
-  codex-agent init [--root PATH] [--analysis FILE] [--apply | --refresh] [--force] [--json]
+  codex-agent context <command>
   codex-agent migrate --from PATH [--root PATH] [--dry-run] [--force] [--json]
   codex-agent migrate navigation --from PATH [--root PATH] [--apply] [--force] [--include-templates] [--include-workflows] [--include-navigation] [--json]
   codex-agent doctor [--root PATH] [--json]
-  codex-agent context index [--root PATH] [--dry-run] [--json]
-  codex-agent context save --proposal FILE [--root PATH] [--apply] [--update] [--json]
   codex-agent eval [--root PATH] [--json]
   codex-agent help
-`;
 
-const option = (args, name, fallback) => {
-  const index = args.indexOf(name);
-  return index >= 0 && args[index + 1] ? args[index + 1] : fallback;
+Run "codex-agent context" to list context commands.`;
+
+const contextUsage = `Codex Agent context commands
+
+Usage:
+  codex-agent context init [--root PATH] [--analysis FILE] [--apply --plan-hash HASH] [--force] [--json]
+  codex-agent context refresh [--root PATH] [--analysis FILE] [--apply --plan-hash HASH] [--force] [--json]
+  codex-agent context index [--root PATH] [--dry-run] [--json]
+  codex-agent context save --proposal FILE [--root PATH] [--apply] [--update] [--json]
+
+Both init and refresh preview by default. Apply the exact reviewed preview by passing --apply with its planHash.`;
+
+const OPTION_KEYS = new Map([
+  ["--analysis", "analysisFile"],
+  ["--from", "source"],
+  ["--plan-hash", "expectedPlanHash"],
+  ["--proposal", "proposalFile"],
+  ["--root", "root"]
+]);
+
+const FLAG_KEYS = new Map([
+  ["--apply", "apply"],
+  ["--dry-run", "dryRun"],
+  ["--force", "force"],
+  ["--include-navigation", "includeNavigation"],
+  ["--include-templates", "includeTemplates"],
+  ["--include-workflows", "includeWorkflows"],
+  ["--json", "json"],
+  ["--update", "update"]
+]);
+
+const parseOptions = (args, { command, options = [], flags = [] }) => {
+  const allowedOptions = new Set(options);
+  const allowedFlags = new Set(flags);
+  const seen = new Set();
+  const parsed = {};
+
+  for (let index = 0; index < args.length; index += 1) {
+    const argument = args[index];
+    if (!argument.startsWith("-")) throw new Error(`Unexpected argument for ${command}: ${argument}`);
+    if (seen.has(argument)) throw new Error(`Duplicate option for ${command}: ${argument}`);
+    seen.add(argument);
+
+    if (allowedOptions.has(argument)) {
+      const value = args[index + 1];
+      if (!value || value.startsWith("-")) throw new Error(`${argument} requires a value for ${command}`);
+      parsed[OPTION_KEYS.get(argument)] = value;
+      index += 1;
+      continue;
+    }
+
+    if (allowedFlags.has(argument)) {
+      parsed[FLAG_KEYS.get(argument)] = true;
+      continue;
+    }
+
+    throw new Error(`Unknown option for ${command}: ${argument}`);
+  }
+
+  parsed.root = path.resolve(parsed.root ?? process.cwd());
+  return parsed;
 };
 
-const flags = (args) => ({
-  root: path.resolve(option(args, "--root", process.cwd())),
-  dryRun: args.includes("--dry-run"),
-  apply: args.includes("--apply"),
-  refresh: args.includes("--refresh"),
-  update: args.includes("--update"),
-  includeNavigation: args.includes("--include-navigation"),
-  includeTemplates: args.includes("--include-templates"),
-  includeWorkflows: args.includes("--include-workflows"),
-  force: args.includes("--force"),
-  json: args.includes("--json")
-});
+const readJsonFile = (file, label) => {
+  const absolute = path.resolve(file);
+  if (!fs.existsSync(absolute)) throw new Error(`${label} file not found: ${absolute}`);
+  return JSON.parse(fs.readFileSync(absolute, "utf8"));
+};
 
 const write = (value, json) => {
   if (json) {
@@ -51,69 +100,122 @@ const write = (value, json) => {
   else process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
 };
 
-export const main = async (args) => {
-  const [command, subcommand] = args;
-  const options = flags(args);
+const finishWithConflicts = (result, json) => {
+  write(result, json);
+  if (result.conflicts.length) process.exitCode = 2;
+};
 
-  if (!command || command === "help" || args.includes("--help") || args.includes("-h")) {
-    write(usage.trimEnd(), false);
+export const main = async (args) => {
+  const [command, ...rest] = args;
+
+  if (!command || command === "help") {
+    if (rest.length === 1 && rest[0] === "context") write(contextUsage, false);
+    else if (rest.length > 0) throw new Error(`Unknown help topic: ${rest.join(" ")}`);
+    else write(usage, false);
     return;
   }
 
-  if (command === "init") {
-    const analysisFile = option(args, "--analysis");
-    let analysis = null;
-    if (analysisFile) {
-      const absolute = path.resolve(analysisFile);
-      if (!fs.existsSync(absolute)) throw new Error(`Analysis file not found: ${absolute}`);
-      analysis = JSON.parse(fs.readFileSync(absolute, "utf8"));
+  if (command === "context") {
+    const [subcommand, ...contextArgs] = rest;
+    if (!subcommand || subcommand === "help" || subcommand === "--help" || subcommand === "-h") {
+      write(contextUsage, false);
+      return;
     }
-    const result = initializeProject({ ...options, analysis });
-    write(result, options.json);
-    if (result.conflicts.length) process.exitCode = 2;
+    if (contextArgs.includes("--help") || contextArgs.includes("-h")) {
+      if (!["init", "refresh", "index", "save"].includes(subcommand)) {
+        throw new Error(`Unknown context command: ${subcommand}\n\n${contextUsage}`);
+      }
+      write(contextUsage, false);
+      return;
+    }
+
+    if (subcommand === "init" || subcommand === "refresh") {
+      const options = parseOptions(contextArgs, {
+        command: `context ${subcommand}`,
+        options: ["--root", "--analysis", "--plan-hash"],
+        flags: ["--apply", "--force", "--json"]
+      });
+      const analysis = options.analysisFile ? readJsonFile(options.analysisFile, "Analysis") : null;
+      const operationOptions = { ...options, analysis };
+      const result = subcommand === "init"
+        ? initializeContext(operationOptions)
+        : refreshContext(operationOptions);
+      finishWithConflicts(result, options.json);
+      return;
+    }
+
+    if (subcommand === "index") {
+      const options = parseOptions(contextArgs, {
+        command: "context index",
+        options: ["--root"],
+        flags: ["--dry-run", "--json"]
+      });
+      const result = buildContextIndex(options);
+      write({ path: result.path, entries: result.index.entries.length, dryRun: result.dryRun }, options.json);
+      return;
+    }
+
+    if (subcommand === "save") {
+      const options = parseOptions(contextArgs, {
+        command: "context save",
+        options: ["--root", "--proposal"],
+        flags: ["--apply", "--update", "--json"]
+      });
+      if (!options.proposalFile) throw new Error("context save requires --proposal FILE");
+      const proposal = readJsonFile(options.proposalFile, "Proposal");
+      const result = saveContextProposal({ ...options, proposal });
+      finishWithConflicts(result, options.json);
+      return;
+    }
+
+    throw new Error(`Unknown context command: ${subcommand}\n\n${contextUsage}`);
+  }
+
+  if (args.includes("--help") || args.includes("-h")) {
+    write(usage, false);
     return;
   }
 
   if (command === "doctor") {
+    const options = parseOptions(rest, {
+      command: "doctor",
+      options: ["--root"],
+      flags: ["--json"]
+    });
     const result = diagnoseProject(options);
     write(result, options.json);
     if (!result.ok) process.exitCode = 1;
     return;
   }
 
-  if (command === "migrate" && subcommand === "navigation") {
-    const result = migrateNavigationContext({ ...options, source: option(args, "--from") });
-    write(result, options.json);
-    if (result.conflicts.length) process.exitCode = 2;
-    return;
-  }
-
   if (command === "migrate") {
-    const result = migrateContext({ ...options, source: option(args, "--from") });
-    write(result, options.json);
-    if (result.conflicts.length) process.exitCode = 2;
-    return;
-  }
-
-  if (command === "context" && subcommand === "index") {
-    const result = buildContextIndex(options);
-    write({ path: result.path, entries: result.index.entries.length, dryRun: result.dryRun }, options.json);
-    return;
-  }
-
-  if (command === "context" && subcommand === "save") {
-    const proposalFile = option(args, "--proposal");
-    if (!proposalFile) throw new Error("context save requires --proposal FILE");
-    const absolute = path.resolve(proposalFile);
-    if (!fs.existsSync(absolute)) throw new Error(`Proposal file not found: ${absolute}`);
-    const proposal = JSON.parse(fs.readFileSync(absolute, "utf8"));
-    const result = saveContextProposal({ ...options, proposal });
-    write(result, options.json);
-    if (result.conflicts.length) process.exitCode = 2;
+    const navigation = rest[0] === "navigation";
+    if (rest[0] && !rest[0].startsWith("-") && !navigation) {
+      throw new Error(`Unknown migrate command: ${rest[0]}`);
+    }
+    const migrateArgs = navigation ? rest.slice(1) : rest;
+    const options = parseOptions(migrateArgs, navigation ? {
+      command: "migrate navigation",
+      options: ["--from", "--root"],
+      flags: ["--apply", "--force", "--include-templates", "--include-workflows", "--include-navigation", "--json"]
+    } : {
+      command: "migrate",
+      options: ["--from", "--root"],
+      flags: ["--dry-run", "--force", "--json"]
+    });
+    const result = navigation
+      ? migrateNavigationContext(options)
+      : migrateContext(options);
+    finishWithConflicts(result, options.json);
     return;
   }
 
   if (command === "eval") {
+    const options = parseOptions(rest, {
+      command: "eval",
+      options: ["--root"],
+      flags: ["--json"]
+    });
     const routing = evaluateRouting(options);
     const behavior = evaluateBehaviorContracts(options);
     const result = {

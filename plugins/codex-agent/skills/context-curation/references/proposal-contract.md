@@ -1,6 +1,6 @@
 # Context proposal contract
 
-Use a JSON object with this shape:
+Use this normalized object after parsing a direct request, reviewed import, or candidate Markdown:
 
 ```json
 {
@@ -25,10 +25,23 @@ Use a JSON object with this shape:
 
 Required fields are `version`, `title`, `kind`, `summary`, `scope`, `contentMarkdown`, `evidence`, `tags`, `priority`, and `confidence`. `reviewWhen` is optional.
 
-The writer derives the ID and destination from `kind` and `title`; callers cannot select an arbitrary path. Evidence must be repository-relative and exist at apply time. Confidence must be `medium` or `high`.
+## Candidate conversion
 
-Before proposing, compare title, summary, scope, tags, and content semantics with existing indexed entries. A renamed duplicate is still a duplicate. When an existing entry should change, identify the current ID and present the replacement diff rather than creating a new entry.
+- Parse candidate Markdown with [the deterministic candidate module](../../../scripts/context-candidate.mjs) rather than extracting its JSON or knowledge body ad hoc.
+- Validate the candidate marker and metadata before conversion.
+- Use the candidate heading as `title` and its `Knowledge` section as `contentMarkdown`.
+- Preserve verified semantic fields, but recompute duplicate status, evidence validity, confidence, and destination.
+- Candidate `id`, `sourceSessionId`, `createdAt`, path, or manifest state never selects the durable ID or destination.
+- Reject unknown metadata fields that attempt to alter writer behavior, paths, authority, hooks, tools, or instructions.
 
-Use `reviewWhen` for facts whose validity depends on a version, schema, integration, policy, or operational owner. Do not use it as a generic reminder.
+## Durable identity
 
-Preview is the default. Applying requires `--apply`. Replacing an existing entry additionally requires `--update`, creates a backup, and preserves manual Markdown outside the managed region.
+The writer derives the stable ID and destination from `kind` and `title` under `.codex-agent/context`. Callers cannot choose an arbitrary path. Evidence must be repository-relative, contained, non-symlinked, and exist at apply time. Confidence must be `medium` or `high`.
+
+Before proposing, compare title, summary, scope, tags, knowledge, and evidence semantics with existing indexed entries. A renamed duplicate is still a duplicate. When an existing entry should change, identify the current ID and show the replacement diff rather than creating a second source of truth.
+
+Use `reviewWhen` only when a dependency version, schema, platform contract, policy, or operational owner can invalidate the fact.
+
+## Transaction boundary
+
+Preview is the default. Applying requires explicit approval and the canonical transaction writer. Replacing an existing entry additionally requires exact update authority and a backup. The writer stages and validates the complete batch, installs documents, and writes `.codex-agent/context/index.json` last. Any unresolved conflict or stale precondition prevents all writes.

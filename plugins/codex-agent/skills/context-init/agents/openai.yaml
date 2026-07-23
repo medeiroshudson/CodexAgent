@@ -1,0 +1,4 @@
+interface:
+  display_name: "Context Init"
+  short_description: "Bootstrap evidence-backed project context"
+  default_prompt: "Use $context-init to preview the first evidence-backed canonical Codex context; after approval, apply only with the exact preview planHash."

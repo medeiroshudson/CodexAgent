@@ -1,8 +1,12 @@
 node_modules/
 coverage/
 dist/
-.codex-agent/
+.codex-agent/analysis.json
+.codex-agent/sessions/
+.codex-agent/backups/
+.codex-agent/.locks/
+.codex-agent/.transactions/
+.codex-agent/**/*.tmp-*
 .plugin-eval/
 *.log
 .DS_Store
-

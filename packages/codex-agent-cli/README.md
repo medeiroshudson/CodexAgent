@@ -5,14 +5,15 @@ Command-line diagnostics and project bootstrap helpers for the [codex-agent](htt
 Run the latest published version without a global installation:
 
 ```bash
-npx --yes @codex-agent/cli@latest init --json
+npx --yes @codex-agent/cli@latest context init --json
+npx --yes @codex-agent/cli@latest context refresh --json
 npx --yes @codex-agent/cli@latest doctor --json
 npx --yes @codex-agent/cli@latest context save --proposal context-proposal.json --json
 npx --yes @codex-agent/cli@latest migrate navigation --from /path/to/project --json
 npx --yes @codex-agent/cli@latest eval --json
 ```
 
-Run these commands from the target repository. Use `npx @codex-agent/cli@latest help` to list every command. Initialization and context saving preview changes by default; pass `--apply` only after reviewing the result. Existing context updates also require `--update`.
+Run these commands from the target repository. Use `npx @codex-agent/cli@latest help` to list every command. Context initialization, refresh, and saving preview changes by default. For init or refresh, pass `--apply --plan-hash <reviewed-plan-hash>` so repository drift cannot change the reviewed proposal; context saving uses `--apply`, and existing curated-context updates also require `--update`.
 
 `migrate navigation` discovers navigation-based Markdown context trees, skips incompatible runtime material by default, and writes native indexed context only with `--apply`.
 

@@ -3,6 +3,21 @@
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { assertWritableContextCatalog } from "../../../scripts/lib/context-catalog.mjs";
+import { assertValidContextIndex } from "../../../scripts/lib/context-index.mjs";
+import { applyContextTransaction, withContextLock } from "../../../scripts/lib/context-transaction.mjs";
+import {
+  assertInside,
+  assertNoSymlink,
+  assertSafeMarkdownContent,
+  containsSensitiveContent,
+  listTreeFiles,
+  resolveProjectRoot,
+  sha256,
+  slash
+} from "../../../scripts/lib/safe-files.mjs";
+
+export { containsSensitiveContent };
 
 const KINDS = {
   decision: "decisions",
@@ -17,110 +32,71 @@ const PROPOSAL_FIELDS = new Set([
   "version", "title", "kind", "summary", "scope", "contentMarkdown",
   "evidence", "tags", "priority", "confidence", "reviewWhen"
 ]);
-const SECRET_PATTERNS = [
-  /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/i,
-  /\bAKIA[0-9A-Z]{16}\b/,
-  /\bgh[pousr]_[A-Za-z0-9_]{20,}\b/,
-  /\bsk-[A-Za-z0-9_-]{20,}\b/,
-  /\bxox[baprs]-[A-Za-z0-9-]{20,}\b/,
-  /\beyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/
-];
-
-export const containsSensitiveContent = (value) => SECRET_PATTERNS.some((pattern) => pattern.test(String(value)));
-
-const slash = (value) => value.split(path.sep).join("/");
 const unique = (items) => [...new Set(items)];
 const safeText = (value, limit = 300) => String(value).replace(/[\r\n]+/g, " ").replace(/`/g, "'").trim().slice(0, limit);
 const mdCode = (value) => `\`${safeText(value)}\``;
 const normalizeForComparison = (value) => String(value).toLowerCase().replace(/\s+/g, " ").trim();
 
-export const slug = (value) => String(value)
-  .normalize("NFKD")
-  .replace(/[\u0300-\u036f]/g, "")
-  .toLowerCase()
-  .replace(/[^a-z0-9]+/g, "-")
-  .replace(/^-|-$/g, "")
-  .slice(0, 64);
+export const slug = (value) => {
+  const normalized = String(value).normalize("NFKC").trim();
+  if (!normalized) return "";
+  const decomposed = normalized.normalize("NFKD").replace(/[\u0300-\u036f]/g, "");
+  const ascii = decomposed
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 64);
+  const unicodeSuffix = `u-${sha256(Buffer.from(normalized)).slice(0, 16)}`;
+  if (!ascii) return unicodeSuffix;
+  if (/[^\x00-\x7f]/.test(decomposed)) return `${ascii.slice(0, 45).replace(/-$/g, "")}-${unicodeSuffix}`;
+  return ascii;
+};
 
-const timestamp = () => new Date().toISOString().replace(/[:.]/g, "-");
 const firstHeading = (content, fallback) => content.match(/^#\s+(.+)$/m)?.[1]?.trim() || fallback;
 const firstParagraph = (content, fallback) => {
   const paragraphs = content
     .split(/\n\s*\n/)
     .map((paragraph) => paragraph.replace(/^#+\s+.*$/gm, "").replace(/^[-*]\s+/gm, "").trim())
     .filter(Boolean);
-  return (paragraphs[0] || fallback).replace(/\s+/g, " ").slice(0, 240);
+  const candidate = (paragraphs[0] || "").replace(/\s+/g, " ").slice(0, 240);
+  return candidate.length >= 10 ? candidate : String(fallback).replace(/\s+/g, " ").slice(0, 240);
 };
 
 const listMarkdown = (root) => {
   if (!fs.existsSync(root)) return [];
-  const files = [];
-  const visit = (directory) => {
-    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-      if (entry.isSymbolicLink()) continue;
-      const absolute = path.join(directory, entry.name);
-      if (entry.isDirectory()) visit(absolute);
-      else if (entry.isFile() && entry.name.endsWith(".md")) files.push(absolute);
-    }
-  };
-  visit(root);
-  return files.sort();
+  return listTreeFiles(root).filter((entry) => entry.relative.toLowerCase().endsWith(".md")).map((entry) => entry.absolute);
 };
 
-const readIndex = (indexPath) => {
-  if (!fs.existsSync(indexPath)) return { version: 1, entries: [] };
-  let parsed;
-  try { parsed = JSON.parse(fs.readFileSync(indexPath, "utf8")); }
-  catch (error) { throw new Error(`Invalid context index: ${error instanceof Error ? error.message : String(error)}`); }
-  if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.entries)) throw new Error("Invalid context index: entries must be an array");
-  return parsed;
-};
-
-const assertInside = (root, target, label) => {
-  if (target !== root && !target.startsWith(`${root}${path.sep}`)) throw new Error(`${label} escapes the allowed root`);
-};
-
-const assertNoSymlink = (root, target) => {
-  const relative = path.relative(root, target);
-  let current = root;
-  for (const segment of relative.split(path.sep).filter(Boolean)) {
-    current = path.join(current, segment);
-    if (fs.existsSync(current) && fs.lstatSync(current).isSymbolicLink()) throw new Error(`Refusing to write through symbolic link: ${slash(path.relative(root, current))}`);
-  }
-};
-
-const validateIndexEntries = (index, contextRoot, pendingPath = null) => {
-  const errors = [];
-  const ids = new Set();
-  const paths = new Set();
-  for (const entry of index.entries) {
-    if (!entry || typeof entry !== "object") {
-      errors.push("context index contains a non-object entry");
-      continue;
-    }
-    if (ids.has(entry.id)) errors.push(`duplicate context id: ${entry.id}`);
-    if (paths.has(entry.path)) errors.push(`duplicate context path: ${entry.path}`);
-    ids.add(entry.id);
-    paths.add(entry.path);
-    const target = path.resolve(contextRoot, entry.path || "");
-    if (target !== contextRoot && !target.startsWith(`${contextRoot}${path.sep}`)) errors.push(`context path escapes root: ${entry.path}`);
-    else if (entry.path !== pendingPath && !fs.existsSync(target)) errors.push(`context path missing: ${entry.path}`);
-  }
-  return errors;
-};
-
-export const buildContextIndex = ({ root, dryRun = false }) => {
-  const projectRoot = fs.realpathSync(path.resolve(root));
-  const contextRoot = path.join(projectRoot, ".agents", "context");
-  if (!fs.existsSync(contextRoot)) throw new Error(`Context directory not found: ${contextRoot}`);
-  assertNoSymlink(projectRoot, contextRoot);
+export const prepareContextIndex = ({ root, pendingDocuments = [] }) => {
+  const writable = assertWritableContextCatalog({ root });
+  const projectRoot = writable.root;
+  const contextRoot = writable.contextRoot;
+  if (!fs.existsSync(contextRoot) && pendingDocuments.length === 0) throw new Error(`Context directory not found: ${contextRoot}`);
+  assertNoSymlink(projectRoot, contextRoot, "Canonical context root");
   const indexPath = path.join(contextRoot, "index.json");
-  const prior = readIndex(indexPath);
+  const prior = writable.index;
   const priorByPath = new Map(prior.entries.map((entry) => [entry.path, entry]));
-  const entries = listMarkdown(contextRoot).map((file) => {
-    const relative = slash(path.relative(contextRoot, file));
-    const content = fs.readFileSync(file, "utf8");
-    const title = firstHeading(content, path.basename(file, ".md"));
+  const pending = new Map();
+  for (const [index, document] of pendingDocuments.entries()) {
+    if (!document || typeof document.path !== "string" || typeof document.content !== "string") {
+      throw new Error(`Pending context document ${index} is invalid`);
+    }
+    assertSafeMarkdownContent(document.content, `Pending context document ${index}`);
+    const target = path.resolve(contextRoot, document.path);
+    assertInside(contextRoot, target, `Pending context document ${index}`);
+    const relative = slash(path.relative(contextRoot, target));
+    if (!relative || relative.startsWith("../") || relative === "index.json" || !relative.endsWith(".md")) {
+      throw new Error(`Pending context document ${index} has an invalid path: ${document.path}`);
+    }
+    pending.set(relative, document.content);
+  }
+  const diskPaths = listMarkdown(contextRoot).map((file) => slash(path.relative(contextRoot, file)));
+  const entries = [...new Set([...diskPaths, ...pending.keys()])].sort().map((relative) => {
+    const content = pending.has(relative)
+      ? pending.get(relative)
+      : fs.readFileSync(path.join(contextRoot, ...relative.split("/")), "utf8");
+    assertSafeMarkdownContent(content, `Context Markdown ${relative}`);
+    const title = firstHeading(content, path.basename(relative, ".md"));
     const existing = priorByPath.get(relative);
     const tags = unique([
       ...relative.replace(/\.md$/, "").split("/"),
@@ -140,9 +116,25 @@ export const buildContextIndex = ({ root, dryRun = false }) => {
     version: 1,
     entries
   };
+  assertValidContextIndex(index, { root: projectRoot, contextRoot, pendingPaths: [...pending.keys()] });
   const content = `${JSON.stringify(index, null, 2)}\n`;
-  if (!dryRun) fs.writeFileSync(indexPath, content);
-  return { path: indexPath, index, content, dryRun };
+  return { projectRoot, path: indexPath, index, content };
+};
+
+export const buildContextIndex = ({ root, dryRun = false }) => {
+  const preview = prepareContextIndex({ root });
+  if (dryRun) return { path: preview.path, index: preview.index, content: preview.content, dryRun: true };
+  return withContextLock({ root: preview.projectRoot }, () => {
+    const prepared = prepareContextIndex({ root: preview.projectRoot });
+    applyContextTransaction({
+      root: prepared.projectRoot,
+      documents: [],
+      indexContent: prepared.content,
+      backupPaths: fs.existsSync(prepared.path) ? ["index.json"] : [],
+      lock: false
+    });
+    return { path: prepared.path, index: prepared.index, content: prepared.content, dryRun: false };
+  });
 };
 
 const checkString = (errors, proposal, field, minimum, maximum) => {
@@ -193,12 +185,14 @@ export const validateContextProposal = (proposal, { root } = {}) => {
       const target = path.resolve(projectRoot, item.path);
       if (target !== projectRoot && !target.startsWith(`${projectRoot}${path.sep}`)) {
         errors.push(`evidence[${index}].path escapes the repository`);
-      } else if (!fs.existsSync(target)) {
-        errors.push(`evidence[${index}].path does not exist: ${item.path}`);
-      } else {
-        const realTarget = fs.realpathSync(target);
-        assertInside(projectRoot, realTarget, `evidence[${index}].path`);
+        continue;
       }
+      try { assertNoSymlink(projectRoot, target, `evidence[${index}].path`); }
+      catch {
+        errors.push(`evidence[${index}].path must not traverse a symbolic link`);
+        continue;
+      }
+      if (!fs.existsSync(target)) errors.push(`evidence[${index}].path does not exist: ${item.path}`);
     }
   }
   return { ok: errors.length === 0, errors };
@@ -267,66 +261,25 @@ const diff = (before, after) => {
   const newLines = after.split("\n");
   let prefix = 0;
   while (prefix < oldLines.length && prefix < newLines.length && oldLines[prefix] === newLines[prefix]) prefix++;
-  return [`@@ line ${prefix + 1} @@`, ...oldLines.slice(prefix, prefix + 80).map((line) => `- ${line}`), ...newLines.slice(prefix, prefix + 80).map((line) => `+ ${line}`)].join("\n");
+  return [`@@ line ${prefix + 1} @@`, ...oldLines.slice(prefix).map((line) => `- ${line}`), ...newLines.slice(prefix).map((line) => `+ ${line}`)].join("\n");
 };
 
-const transactionWrite = ({ destination, documentContent, indexPath, indexContent }) => {
-  const token = `${process.pid}-${Date.now()}`;
-  const tempDocument = `${destination}.codex-agent-tmp-${token}`;
-  const tempIndex = `${indexPath}.codex-agent-tmp-${token}`;
-  const rollbackDocument = `${destination}.codex-agent-rollback-${token}`;
-  const rollbackIndex = `${indexPath}.codex-agent-rollback-${token}`;
-  const hadDocument = fs.existsSync(destination);
-  const hadIndex = fs.existsSync(indexPath);
-  let movedDocument = false;
-  let movedIndex = false;
-  let installedDocument = false;
-  let installedIndex = false;
-  try {
-    fs.writeFileSync(tempDocument, documentContent, { flag: "wx" });
-    fs.writeFileSync(tempIndex, indexContent, { flag: "wx" });
-    if (hadDocument) {
-      fs.renameSync(destination, rollbackDocument);
-      movedDocument = true;
-    }
-    if (hadIndex) {
-      fs.renameSync(indexPath, rollbackIndex);
-      movedIndex = true;
-    }
-    fs.renameSync(tempDocument, destination);
-    installedDocument = true;
-    fs.renameSync(tempIndex, indexPath);
-    installedIndex = true;
-  } catch (error) {
-    if (installedDocument && fs.existsSync(destination)) fs.unlinkSync(destination);
-    if (installedIndex && fs.existsSync(indexPath)) fs.unlinkSync(indexPath);
-    if (movedDocument && fs.existsSync(rollbackDocument)) fs.renameSync(rollbackDocument, destination);
-    if (movedIndex && fs.existsSync(rollbackIndex)) fs.renameSync(rollbackIndex, indexPath);
-    for (const temporary of [tempDocument, tempIndex]) if (fs.existsSync(temporary)) fs.unlinkSync(temporary);
-    throw error;
-  }
-  for (const rollback of [rollbackDocument, rollbackIndex]) {
-    try { if (fs.existsSync(rollback)) fs.unlinkSync(rollback); } catch { /* committed data remains authoritative */ }
-  }
-};
-
-export const saveContextProposal = ({ root, proposal, apply = false, update = false }) => {
-  const projectRoot = fs.realpathSync(path.resolve(root));
+const prepareContextProposal = ({ root, proposal, apply, update }) => {
+  const projectRoot = resolveProjectRoot(root);
   const validation = validateContextProposal(proposal, { root: projectRoot });
   if (!validation.ok) throw new Error(`Invalid context proposal:\n- ${validation.errors.join("\n- ")}`);
   const normalized = normalizeContextProposal(proposal);
   const rendered = renderContextProposal(normalized);
-  const contextRoot = path.join(projectRoot, ".agents", "context");
+  const writable = assertWritableContextCatalog({ root: projectRoot });
+  const contextRoot = writable.contextRoot;
   const relativePath = `${KINDS[normalized.kind]}/${slug(normalized.title)}.md`;
   const destination = path.join(contextRoot, ...relativePath.split("/"));
   assertInside(contextRoot, destination, "context destination");
-  assertNoSymlink(projectRoot, contextRoot);
-  assertNoSymlink(projectRoot, destination);
-  const indexPath = path.join(contextRoot, "index.json");
-  const index = readIndex(indexPath);
+  assertNoSymlink(projectRoot, contextRoot, "Canonical context root");
+  assertNoSymlink(projectRoot, destination, "Context destination");
+  const indexPath = writable.indexPath;
+  const index = writable.index;
   const currentIndexContent = fs.existsSync(indexPath) ? fs.readFileSync(indexPath, "utf8") : null;
-  const indexErrors = validateIndexEntries(index, contextRoot, relativePath);
-  if (indexErrors.length) throw new Error(`Invalid context index:\n- ${indexErrors.join("\n- ")}`);
   const duplicate = index.entries.find((entry) => entry.path !== relativePath
     && (entry.id === rendered.id || normalizeForComparison(entry.summary) === normalizeForComparison(normalized.summary)));
   if (duplicate) throw new Error(`Duplicate context candidate: ${duplicate.path}`);
@@ -347,6 +300,7 @@ export const saveContextProposal = ({ root, proposal, apply = false, update = fa
     entries: [...index.entries.filter((entry) => entry.path !== relativePath && entry.id !== rendered.id), nextEntry]
       .sort((left, right) => left.path.localeCompare(right.path))
   };
+  assertValidContextIndex(nextIndex, { root: projectRoot, contextRoot, pendingPaths: [relativePath] });
   const indexContent = `${JSON.stringify(nextIndex, null, 2)}\n`;
   const metadataChanged = Boolean(priorEntry) && JSON.stringify(priorEntry) !== JSON.stringify(nextEntry);
   const conflicts = merge.conflict || (metadataChanged && !update) ? [relativePath] : [];
@@ -360,31 +314,43 @@ export const saveContextProposal = ({ root, proposal, apply = false, update = fa
     status: overallStatus,
     diff: diff(current, merge.content),
     indexDiff: diff(currentIndexContent, indexContent),
-    index: { path: ".agents/context/index.json", entries: nextIndex.entries.length },
+    index: { path: ".codex-agent/context/index.json", entries: nextIndex.entries.length },
     conflicts,
     backedUp: [],
-    applied: false
+    applied: false,
+    transaction: {
+      documents: [{ path: relativePath, content: merge.content }],
+      indexContent,
+      backupPaths: current !== null && overallStatus === "update"
+        ? [...(merge.status === "update" ? [relativePath] : []), ...(currentIndexContent !== null ? ["index.json"] : [])]
+        : []
+    },
+    unchanged: current === merge.content && currentIndexContent === indexContent
   };
-  if (!apply || conflicts.length) return result;
-  fs.mkdirSync(path.dirname(destination), { recursive: true });
-  if (current !== null && overallStatus === "update") {
-    const backupRoot = path.join(projectRoot, ".codex-agent", "backups", timestamp());
-    if (merge.status === "update") {
-      const documentBackup = path.join(backupRoot, ".agents", "context", ...relativePath.split("/"));
-      fs.mkdirSync(path.dirname(documentBackup), { recursive: true });
-      fs.copyFileSync(destination, documentBackup);
-      result.backedUp.push(slash(path.relative(projectRoot, documentBackup)));
-    }
-    if (fs.existsSync(indexPath)) {
-      const indexBackup = path.join(backupRoot, ".agents", "context", "index.json");
-      fs.mkdirSync(path.dirname(indexBackup), { recursive: true });
-      fs.copyFileSync(indexPath, indexBackup);
-      result.backedUp.push(slash(path.relative(projectRoot, indexBackup)));
-    }
-  }
-  transactionWrite({ destination, documentContent: merge.content, indexPath, indexContent });
-  result.applied = true;
   return result;
+};
+
+const publicProposalResult = ({ transaction, unchanged, ...result }) => result;
+
+export const saveContextProposal = ({ root, proposal, apply = false, update = false }) => {
+  const preview = prepareContextProposal({ root, proposal, apply, update });
+  if (!apply || preview.conflicts.length) return publicProposalResult(preview);
+  return withContextLock({ root: preview.root }, () => {
+    const prepared = prepareContextProposal({ root: preview.root, proposal, apply: true, update });
+    if (prepared.conflicts.length) return publicProposalResult(prepared);
+    if (!prepared.unchanged) {
+      const transaction = applyContextTransaction({
+        root: prepared.root,
+        documents: prepared.transaction.documents,
+        indexContent: prepared.transaction.indexContent,
+        backupPaths: prepared.transaction.backupPaths,
+        lock: false
+      });
+      prepared.backedUp = transaction.backedUp;
+    }
+    prepared.applied = true;
+    return publicProposalResult(prepared);
+  });
 };
 
 const option = (args, name, fallback) => {

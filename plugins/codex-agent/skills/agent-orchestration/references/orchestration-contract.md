@@ -18,6 +18,8 @@ Pass decisions and paths, not transcript history. Include:
 - expected changed surface and validation;
 - known risks, user-owned files, and unresolved constraints.
 
+Do not pass the whole session handoff to every worker. Select the smallest relevant context and prerequisite output paths. Workers return structured deltas to the orchestrator; they do not mutate shared session state.
+
 ## Concurrency gate
 
 Parallel work requires all of the following:
@@ -25,6 +27,7 @@ Parallel work requires all of the following:
 - no dependency between tasks;
 - no overlapping files or generated outputs;
 - no shared migration, lockfile, schema, or mutable external state;
+- no shared session or candidate writer;
 - independent validation commands;
 - a defined integration owner.
 
@@ -37,3 +40,7 @@ Before final verification, confirm:
 - combined changes preserve unrelated user work;
 - no task summary substitutes for inspecting final repository state;
 - required tests and packaging checks run from the integrated state.
+
+## Session boundary
+
+Resumability is independent of complexity and orchestration route. It is disabled unless explicitly requested in natural language. The orchestrator remains the sole writer, applies compare-and-swap revisions, and verifies repository drift before resume. Session opt-in does not authorize `$context-harvest` or `$context-curation` durable writes.

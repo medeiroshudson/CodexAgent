@@ -4,7 +4,7 @@
 
 1. System, developer, and explicit user instructions.
 2. Applicable `AGENTS.override.md` or `AGENTS.md`, with deeper files taking precedence in their subtree.
-3. Project context explicitly selected from `.agents/context/index.json`.
+3. Project context explicitly selected from `.codex-agent/context/index.json`.
 4. Existing implementation and tests as evidence of current behavior.
 5. Local manifests, lockfiles, types, generated clients, and executable help.
 6. External documentation for version-specific gaps.
@@ -30,6 +30,15 @@ Default to five high-signal context or reference files. A larger packet needs a 
 - Missing target: report and skip it.
 - Conflicting entries: prefer the more specific applicable rule and surface the conflict.
 - Duplicate semantics: return the most specific or authoritative entry, not both.
+
+## Root states
+
+- Canonical only: select from `.codex-agent/context/index.json`.
+- Legacy only: treat `.agents/context` as read-only migration input, label every result legacy, and recommend `$context-init` before any context write.
+- Both roots: select canonical only when the roots are validated byte-equivalent; otherwise report a split-brain conflict and do not combine entries.
+- Symlinked, escaping, or malformed root: reject it and continue only with independently verified repository evidence.
+
+Context selection never authorizes a write and never ingests sessions, handoffs, or candidates.
 
 ## Output packet
 

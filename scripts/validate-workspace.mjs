@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { agentProfiles } from "../plugins/codex-agent/generated/agent-profiles.mjs";
+import { validateContextIndex } from "../plugins/codex-agent/scripts/lib/context-index.mjs";
 import { loadAgentDefinitions, renderAgentProfilesModule, renderAgentToml } from "./sync-agent-profiles.mjs";
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
@@ -14,8 +15,14 @@ const listFiles = (root) => {
   const visit = (directory) => {
     if (!fs.existsSync(directory)) return;
     for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-      if ([".git", "node_modules", ".codex-agent"].includes(entry.name)) continue;
       const absolute = path.join(directory, entry.name);
+      const relative = path.relative(root, absolute).split(path.sep).join("/");
+      if ([".git", "node_modules"].includes(entry.name)) continue;
+      if ([
+        ".codex-agent/sessions", ".codex-agent/backups", ".codex-agent/.locks",
+        ".codex-agent/.transactions"
+      ].some((ignored) => relative === ignored || relative.startsWith(`${ignored}/`))) continue;
+      if (relative === ".codex-agent/analysis.json") continue;
       if (entry.isDirectory()) visit(absolute);
       else if (entry.isFile()) files.push(absolute);
     }
@@ -56,8 +63,11 @@ export const validateWorkspace = (root = defaultRoot) => {
 
   const manifestPath = requireFile("plugins/codex-agent/.codex-plugin/plugin.json");
   const marketplacePath = requireFile(".agents/plugins/marketplace.json");
-  const indexPath = requireFile(".agents/context/index.json");
+  const indexPath = requireFile(".codex-agent/context/index.json");
+  const contextIndexSchemaPath = requireFile("schemas/context-index.schema.json");
   const contextProposalSchemaPath = requireFile("schemas/context-proposal.schema.json");
+  const contextCandidateSchemaPath = requireFile("schemas/context-candidate.schema.json");
+  const sessionManifestSchemaPath = requireFile("schemas/session-manifest.schema.json");
   const cliManifestPath = requireFile("packages/codex-agent-cli/package.json");
   const publishWorkflowPath = requireFile(".github/workflows/publish-cli.yml");
   const routingSuitePath = requireFile("evals/skill-routing.json");
@@ -66,11 +76,19 @@ export const validateWorkspace = (root = defaultRoot) => {
   requireFile("scripts/derive-cli-version.mjs");
   requireFile("package-lock.json");
   requireFile("plugins/codex-agent/hooks/hooks.json");
-  requireFile("plugins/codex-agent/commands/migrate-context.md");
+  requireFile("plugins/codex-agent/scripts/lib/safe-files.mjs");
+  requireFile("plugins/codex-agent/scripts/lib/context-catalog.mjs");
+  requireFile("plugins/codex-agent/scripts/lib/context-index.mjs");
+  requireFile("plugins/codex-agent/scripts/lib/context-transaction.mjs");
+  requireFile("plugins/codex-agent/scripts/context-project.mjs");
+  requireFile("plugins/codex-agent/scripts/session-store.mjs");
+  requireFile("plugins/codex-agent/scripts/context-candidate.mjs");
   requireFile("plugins/codex-agent/skills/context-curation/references/migration-policy.md");
   requireFile("plugins/codex-agent/skills/context-curation/scripts/navigation-migrate.mjs");
 
-  if (fs.existsSync(contextProposalSchemaPath)) parseJson(contextProposalSchemaPath, errors);
+  for (const schema of [contextIndexSchemaPath, contextProposalSchemaPath, contextCandidateSchemaPath, sessionManifestSchemaPath]) {
+    if (fs.existsSync(schema)) parseJson(schema, errors);
+  }
   const routingSuite = fs.existsSync(routingSuitePath) ? parseJson(routingSuitePath, errors) : null;
   if (fs.existsSync(behaviorSuitePath)) parseJson(behaviorSuitePath, errors);
 
@@ -159,13 +177,21 @@ export const validateWorkspace = (root = defaultRoot) => {
 
   const contextIndex = fs.existsSync(indexPath) ? parseJson(indexPath, errors) : null;
   const contextRoot = path.dirname(indexPath);
-  const ids = new Set();
-  for (const item of contextIndex?.entries ?? []) {
-    if (ids.has(item.id)) errors.push(`duplicate context id: ${item.id}`);
-    ids.add(item.id);
-    const target = path.resolve(contextRoot, item.path ?? "");
-    if (!target.startsWith(`${contextRoot}${path.sep}`)) errors.push(`context path escapes root: ${item.path}`);
-    else if (!fs.existsSync(target)) errors.push(`context path missing: ${item.path}`);
+  if (contextIndex) {
+    const validation = validateContextIndex(contextIndex, { root: workspace, contextRoot });
+    for (const error of validation.errors) errors.push(`.codex-agent/context/index.json: ${error}`);
+  }
+  if (fs.existsSync(path.join(workspace, ".agents", "context"))) {
+    errors.push(".agents/context: legacy context root must be migrated to .codex-agent/context");
+  }
+  const ignorePath = requireFile(".gitignore");
+  if (fs.existsSync(ignorePath)) {
+    const ignore = fs.readFileSync(ignorePath, "utf8");
+    if (/^\.codex-agent\/$/m.test(ignore)) errors.push(".gitignore must not ignore the versioned .codex-agent/context root");
+    for (const required of [
+      ".codex-agent/analysis.json", ".codex-agent/sessions/", ".codex-agent/backups/",
+      ".codex-agent/.locks/", ".codex-agent/.transactions/", ".codex-agent/**/*.tmp-*"
+    ]) if (!ignore.includes(required)) errors.push(`.gitignore missing transient path: ${required}`);
   }
 
   const skillsRoot = path.join(workspace, "plugins", "codex-agent", "skills");
@@ -201,9 +227,10 @@ export const validateWorkspace = (root = defaultRoot) => {
   }
 
   const agentCount = listFiles(path.join(workspace, "plugins", "codex-agent", "agents")).filter((file) => file.endsWith(".md")).length;
-  const commandCount = listFiles(path.join(workspace, "plugins", "codex-agent", "commands")).filter((file) => file.endsWith(".md")).length;
   if (agentCount !== canonicalAgents.length) errors.push(`expected ${canonicalAgents.length} canonical agents, found ${agentCount}`);
-  if (commandCount !== 8) errors.push(`expected 8 commands, found ${commandCount}`);
+  if (fs.existsSync(path.join(workspace, "plugins", "codex-agent", "commands"))) {
+    errors.push("plugins/codex-agent/commands: plugin command prompts are not a supported distributed surface");
+  }
 
   const predecessorName = ["Open", "Agents", "Control"].join("");
   const predecessorInitialisms = [["O", "A", "C"].join(""), ["A", "O", "C"].join("")];

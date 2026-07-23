@@ -1,0 +1,4 @@
+interface:
+  display_name: "Context Refresh"
+  short_description: "Refresh managed project context safely"
+  default_prompt: "Use $context-refresh to preview canonical context reconciliation; after approval, apply only with the exact preview planHash."
