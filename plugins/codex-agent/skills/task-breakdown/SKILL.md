@@ -12,6 +12,7 @@ Create a dependency-ordered task graph whose nodes can be executed and verified 
 ## Required inputs
 
 - Approved outcome, exclusions, assumptions, and exit criteria.
+- Approved specification contract for material planned or coordinated work; legacy plan fields remain valid aliases.
 - Active instructions and selected context paths.
 - Architecture and external-contract decisions.
 - Reference source, tests, commands, and worktree constraints.
@@ -32,12 +33,12 @@ Create a dependency-ordered task graph whose nodes can be executed and verified 
 1. Confirm outcome, scope, context, constraints, and exit criteria.
 2. Map components, contracts, state transitions, risks, and integration points.
 3. Split work into independently verifiable outcomes.
-4. Define inputs, outputs, likely files, dependencies, preferred role, validation, and done criteria for each task.
+4. Define inputs, outputs, likely files, dependencies, preferred role, validation, done criteria, and only the relevant `specRefs` for each task.
 5. Analyze overlap and label only defensible parallel batches.
 6. Order tasks by dependency satisfaction and identify the critical path.
 7. Add integration and verification tasks where separate evidence is required.
 8. Publish the plan with `update_plan` when available and keep exactly one local coordination step in progress.
-9. Send approved tasks to `$implementation` or the matching specialist with all context paths and acceptance criteria.
+9. Send approved tasks to `$implementation` or the matching specialist with context paths, acceptance criteria, and relevant `specRefs`; reserve the complete contract for integration and verification.
 
 Read [the task contract](references/task-contract.md) for the canonical packet, overlap analysis, and graph audit.
 

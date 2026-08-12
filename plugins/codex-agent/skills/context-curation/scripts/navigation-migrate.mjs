@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { assertWritableContextCatalog } from "../../../scripts/lib/context-catalog.mjs";
-import { assertValidContextIndex } from "../../../scripts/lib/context-index.mjs";
+import { assertValidContextIndex, upgradeContextIndex, upgradeContextIndexEntry } from "../../../scripts/lib/context-index.mjs";
 import { applyContextTransaction, withContextLock } from "../../../scripts/lib/context-transaction.mjs";
 import { assertInside, assertNoSymlink, containsSensitiveContent, resolveProjectRoot, slash } from "../../../scripts/lib/safe-files.mjs";
 import { slug } from "./context-save.mjs";
@@ -258,7 +258,7 @@ const prepareNavigationContext = ({
   }
 
   const indexPath = path.join(contextRoot, "index.json");
-  const targetIndex = writableCatalog.index;
+  const targetIndex = upgradeContextIndex(writableCatalog.index);
   const priorIndexContent = fs.existsSync(indexPath) ? fs.readFileSync(indexPath, "utf8") : null;
   const changes = [];
   const conflicts = [];
@@ -312,20 +312,22 @@ const prepareNavigationContext = ({
       before: current,
       content: merge.content
     });
-    migrationEntries.push({
+    migrationEntries.push(upgradeContextIndexEntry({
       id: candidate.id,
       path: candidate.destinationRelative,
       summary: candidate.summary,
       tags: candidate.tags,
-      priority: candidate.priority
-    });
+      priority: candidate.priority,
+      kind: "imported",
+      confidence: "low"
+    }));
   }
 
   const migratingIds = new Set(migrationEntries.map((entry) => entry.id));
   const migratingPaths = new Set(migrationEntries.map((entry) => entry.path));
   const nextIndex = {
     ...(targetIndex.$schema ? { $schema: targetIndex.$schema } : {}),
-    version: 1,
+    version: 2,
     entries: [
       ...targetIndex.entries.filter((entry) => !migratingIds.has(entry.id) && !migratingPaths.has(entry.path)),
       ...migrationEntries

@@ -4,7 +4,12 @@ import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { assertWritableContextCatalog } from "../../../scripts/lib/context-catalog.mjs";
-import { assertValidContextIndex } from "../../../scripts/lib/context-index.mjs";
+import {
+  assertValidContextIndex,
+  contextDate,
+  upgradeContextIndex,
+  upgradeContextIndexEntry
+} from "../../../scripts/lib/context-index.mjs";
 import { applyContextTransaction, withContextLock } from "../../../scripts/lib/context-transaction.mjs";
 import {
   assertInside,
@@ -30,7 +35,8 @@ const PRIORITIES = new Set(["critical", "high", "medium", "low"]);
 const CONFIDENCE = new Set(["high", "medium"]);
 const PROPOSAL_FIELDS = new Set([
   "version", "title", "kind", "summary", "scope", "contentMarkdown",
-  "evidence", "tags", "priority", "confidence", "reviewWhen"
+  "evidence", "tags", "priority", "confidence", "reviewWhen", "reviewAfter",
+  "aliases", "supersedes"
 ]);
 const unique = (items) => [...new Set(items)];
 const safeText = (value, limit = 300) => String(value).replace(/[\r\n]+/g, " ").replace(/`/g, "'").trim().slice(0, limit);
@@ -74,7 +80,7 @@ export const prepareContextIndex = ({ root, pendingDocuments = [] }) => {
   if (!fs.existsSync(contextRoot) && pendingDocuments.length === 0) throw new Error(`Context directory not found: ${contextRoot}`);
   assertNoSymlink(projectRoot, contextRoot, "Canonical context root");
   const indexPath = path.join(contextRoot, "index.json");
-  const prior = writable.index;
+  const prior = upgradeContextIndex(writable.index);
   const priorByPath = new Map(prior.entries.map((entry) => [entry.path, entry]));
   const pending = new Map();
   for (const [index, document] of pendingDocuments.entries()) {
@@ -102,18 +108,19 @@ export const prepareContextIndex = ({ root, pendingDocuments = [] }) => {
       ...relative.replace(/\.md$/, "").split("/"),
       ...title.toLowerCase().split(/[^a-z0-9_-]+/).filter((term) => term.length > 2)
     ].map(slug).filter(Boolean)).slice(0, 10);
-    return {
+    return upgradeContextIndexEntry({
+      ...existing,
       id: existing?.id || slug(relative.replace(/\.md$/, "").replaceAll("/", "-")),
       path: relative,
       summary: existing?.summary || firstParagraph(content, `${title} project context.`),
       tags: existing?.tags?.length ? existing.tags : tags,
       priority: existing?.priority || "medium"
-    };
+    });
   }).sort((left, right) => left.path.localeCompare(right.path));
   const schemaPath = path.join(projectRoot, "schemas", "context-index.schema.json");
   const index = {
     ...(fs.existsSync(schemaPath) ? { $schema: "../../schemas/context-index.schema.json" } : prior.$schema ? { $schema: prior.$schema } : {}),
-    version: 1,
+    version: 2,
     entries
   };
   assertValidContextIndex(index, { root: projectRoot, contextRoot, pendingPaths: [...pending.keys()] });
@@ -163,17 +170,35 @@ export const validateContextProposal = (proposal, { root } = {}) => {
   }
   if (!Array.isArray(proposal.evidence) || proposal.evidence.length < 1 || proposal.evidence.length > 20) errors.push("evidence must contain between 1 and 20 entries");
   else for (const [index, item] of proposal.evidence.entries()) {
-    if (!item || typeof item !== "object" || Array.isArray(item) || Object.keys(item).some((key) => !["path", "note"].includes(key))) {
+    const allowed = ["type", "path", "url", "note", "title", "version", "retrievedAt", "publishedAt", "decisionId", "decidedAt"];
+    if (!item || typeof item !== "object" || Array.isArray(item) || Object.keys(item).some((key) => !allowed.includes(key))) {
       errors.push(`evidence[${index}] is invalid`);
       continue;
     }
-    if (typeof item.path !== "string" || !item.path || item.path.length > 300 || path.isAbsolute(item.path)) errors.push(`evidence[${index}].path must be repository-relative`);
+    const type = item.type ?? "repository";
+    if (!["repository", "decision", "external"].includes(type)) errors.push(`evidence[${index}].type is invalid`);
+    if (type === "external") {
+      try {
+        const url = new URL(item.url);
+        if (url.protocol !== "https:" || url.username || url.password) errors.push(`evidence[${index}].url must be an https URL without credentials`);
+      } catch { errors.push(`evidence[${index}].url must be an absolute https URL`); }
+    } else if (typeof item.path !== "string" || !item.path || item.path.length > 300 || path.isAbsolute(item.path)) {
+      errors.push(`evidence[${index}].path must be repository-relative`);
+    }
     if (typeof item.note !== "string" || item.note.trim().length < 5 || item.note.length > 300) errors.push(`evidence[${index}].note is invalid`);
+  }
+  if (Array.isArray(proposal.evidence) && !proposal.evidence.some((item) => ["repository", "decision"].includes(item?.type ?? "repository"))) {
+    errors.push("evidence must include at least one repository or decision source");
   }
   if (proposal.reviewWhen !== undefined && (!Array.isArray(proposal.reviewWhen) || proposal.reviewWhen.length > 5
     || proposal.reviewWhen.some((item) => typeof item !== "string" || item.trim().length < 5 || item.length > 240))) {
     errors.push("reviewWhen must contain up to 5 non-empty strings");
   }
+  if (proposal.reviewAfter !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(proposal.reviewAfter)) errors.push("reviewAfter must use YYYY-MM-DD");
+  if (proposal.aliases !== undefined && (!Array.isArray(proposal.aliases) || proposal.aliases.length > 20
+    || proposal.aliases.some((item) => typeof item !== "string" || item.trim().length < 2))) errors.push("aliases must contain up to 20 non-empty values");
+  if (proposal.supersedes !== undefined && (!Array.isArray(proposal.supersedes) || proposal.supersedes.length > 20
+    || proposal.supersedes.some((item) => typeof item !== "string" || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(item)))) errors.push("supersedes must contain valid context ids");
   const combined = JSON.stringify(proposal);
   if (combined.includes("codex-agent:context:start") || combined.includes("codex-agent:context:end")) errors.push("proposal must not contain managed marker text");
   if (containsSensitiveContent(combined)) errors.push("proposal appears to contain a secret or credential");
@@ -181,7 +206,7 @@ export const validateContextProposal = (proposal, { root } = {}) => {
   if (root && Array.isArray(proposal.evidence)) {
     const projectRoot = fs.realpathSync(path.resolve(root));
     for (const [index, item] of proposal.evidence.entries()) {
-      if (!item || typeof item.path !== "string" || path.isAbsolute(item.path)) continue;
+      if (!item || (item.type === "external") || typeof item.path !== "string" || path.isAbsolute(item.path)) continue;
       const target = path.resolve(projectRoot, item.path);
       if (target !== projectRoot && !target.startsWith(`${projectRoot}${path.sep}`)) {
         errors.push(`evidence[${index}].path escapes the repository`);
@@ -192,7 +217,13 @@ export const validateContextProposal = (proposal, { root } = {}) => {
         errors.push(`evidence[${index}].path must not traverse a symbolic link`);
         continue;
       }
-      if (!fs.existsSync(target)) errors.push(`evidence[${index}].path does not exist: ${item.path}`);
+      const relative = slash(path.relative(projectRoot, target));
+      if (relative === ".codex-agent/context" || relative.startsWith(".codex-agent/context/")
+        || relative === ".agents/context" || relative.startsWith(".agents/context/")
+        || relative.startsWith(".codex-agent/sessions/") || relative.startsWith(".codex-agent/backups/")) {
+        errors.push(`evidence[${index}].path must reference primary repository evidence, not derived context`);
+      } else if (!fs.existsSync(target)) errors.push(`evidence[${index}].path does not exist: ${item.path}`);
+      else if (!fs.statSync(target).isFile()) errors.push(`evidence[${index}].path must be a file`);
     }
   }
   return { ok: errors.length === 0, errors };
@@ -205,16 +236,29 @@ export const normalizeContextProposal = (proposal) => ({
   summary: proposal.summary.trim(),
   scope: proposal.scope.trim(),
   contentMarkdown: proposal.contentMarkdown.trim(),
-  evidence: proposal.evidence.map((item) => ({ path: slash(item.path), note: item.note.trim() })),
+  evidence: proposal.evidence.map((item) => item.type === "external" ? {
+    type: "external", url: item.url, note: item.note.trim(),
+    ...(item.title ? { title: item.title.trim() } : {}),
+    ...(item.version ? { version: item.version.trim() } : {}),
+    ...(item.retrievedAt ? { retrievedAt: item.retrievedAt } : {}),
+    ...(item.publishedAt ? { publishedAt: item.publishedAt } : {})
+  } : {
+    type: item.type ?? "repository", path: slash(item.path), note: item.note.trim(),
+    ...(item.decisionId ? { decisionId: item.decisionId.trim() } : {}),
+    ...(item.decidedAt ? { decidedAt: item.decidedAt } : {})
+  }),
   tags: proposal.tags,
   priority: proposal.priority,
   confidence: proposal.confidence,
-  ...(proposal.reviewWhen?.length ? { reviewWhen: proposal.reviewWhen.map((item) => item.trim()) } : {})
+  ...(proposal.reviewWhen?.length ? { reviewWhen: proposal.reviewWhen.map((item) => item.trim()) } : {}),
+  ...(proposal.reviewAfter ? { reviewAfter: proposal.reviewAfter } : {}),
+  ...(proposal.aliases?.length ? { aliases: unique(proposal.aliases.map((item) => item.trim())) } : {}),
+  ...(proposal.supersedes?.length ? { supersedes: unique(proposal.supersedes) } : {})
 });
 
 export const renderContextProposal = (proposal, { recordedAt = new Date().toISOString().slice(0, 10) } = {}) => {
   const id = `${proposal.kind}-${slug(proposal.title)}`;
-  const evidence = proposal.evidence.map((item) => `- ${mdCode(item.path)} — ${safeText(item.note)}`).join("\n");
+  const evidence = proposal.evidence.map((item) => `- ${mdCode(item.type === "external" ? item.url : item.path)} — ${safeText(item.note)}`).join("\n");
   const review = proposal.reviewWhen?.length
     ? `\n\n## Review when\n\n${proposal.reviewWhen.map((item) => `- ${safeText(item, 240)}`).join("\n")}`
     : "";
@@ -278,26 +322,60 @@ const prepareContextProposal = ({ root, proposal, apply, update }) => {
   assertNoSymlink(projectRoot, contextRoot, "Canonical context root");
   assertNoSymlink(projectRoot, destination, "Context destination");
   const indexPath = writable.indexPath;
-  const index = writable.index;
+  const index = upgradeContextIndex(writable.index);
   const currentIndexContent = fs.existsSync(indexPath) ? fs.readFileSync(indexPath, "utf8") : null;
   const duplicate = index.entries.find((entry) => entry.path !== relativePath
+    && !(normalized.supersedes ?? []).includes(entry.id)
     && (entry.id === rendered.id || normalizeForComparison(entry.summary) === normalizeForComparison(normalized.summary)));
   if (duplicate) throw new Error(`Duplicate context candidate: ${duplicate.path}`);
   const current = fs.existsSync(destination) ? fs.readFileSync(destination, "utf8") : null;
   const merge = mergeManaged(current, rendered, update);
   const priorEntry = index.entries.find((entry) => entry.path === relativePath || entry.id === rendered.id);
   if (priorEntry && priorEntry.path !== relativePath) throw new Error(`Context id already belongs to another path: ${priorEntry.path}`);
-  const nextEntry = {
+  const evidence = normalized.evidence.map((item) => item.type === "external" ? {
+    type: "external",
+    locator: item.url,
+    note: item.note,
+    retrievedAt: item.retrievedAt ?? contextDate(),
+    ...(item.title ? { title: item.title } : {}),
+    ...(item.version ? { version: item.version } : {}),
+    ...(item.publishedAt ? { publishedAt: item.publishedAt } : {})
+  } : {
+    type: item.type,
+    locator: item.path,
+    note: item.note,
+    sha256: sha256(fs.readFileSync(path.resolve(projectRoot, item.path))),
+    ...(item.decisionId ? { decisionId: item.decisionId } : {}),
+    ...(item.decidedAt ? { decidedAt: item.decidedAt } : {})
+  });
+  const nextEntry = upgradeContextIndexEntry({
+    ...priorEntry,
     id: rendered.id,
     path: relativePath,
     summary: normalized.summary,
     tags: unique([normalized.kind, ...normalized.tags]).slice(0, 10),
-    priority: normalized.priority
-  };
+    priority: normalized.priority,
+    kind: normalized.kind,
+    scope: normalized.scope,
+    confidence: normalized.confidence,
+    status: "active",
+    lastVerifiedAt: contextDate(),
+    evidence,
+    ...(normalized.reviewAfter ? { reviewAfter: normalized.reviewAfter } : {}),
+    ...(normalized.aliases?.length ? { aliases: normalized.aliases } : {}),
+    ...(normalized.supersedes?.length ? { supersedes: normalized.supersedes } : {})
+  });
+  for (const supersededId of normalized.supersedes ?? []) {
+    if (supersededId === rendered.id) throw new Error("Context proposal must not supersede itself");
+    if (!index.entries.some((entry) => entry.id === supersededId)) throw new Error(`Context proposal supersedes unknown id: ${supersededId}`);
+  }
+  const supersededEntries = index.entries.map((entry) => (normalized.supersedes ?? []).includes(entry.id)
+    ? upgradeContextIndexEntry({ ...entry, status: "superseded", supersededBy: unique([...(entry.supersededBy ?? []), rendered.id]) })
+    : entry);
   const nextIndex = {
     ...(index.$schema ? { $schema: index.$schema } : {}),
-    version: 1,
-    entries: [...index.entries.filter((entry) => entry.path !== relativePath && entry.id !== rendered.id), nextEntry]
+    version: 2,
+    entries: [...supersededEntries.filter((entry) => entry.path !== relativePath && entry.id !== rendered.id), nextEntry]
       .sort((left, right) => left.path.localeCompare(right.path))
   };
   assertValidContextIndex(nextIndex, { root: projectRoot, contextRoot, pendingPaths: [relativePath] });

@@ -10,6 +10,7 @@ import {
   resolveContextCatalog
 } from "./lib/context-catalog.mjs";
 import { applyProjectTransaction, withContextLock } from "./lib/context-transaction.mjs";
+import { contextDate, upgradeContextIndex, upgradeContextIndexEntry } from "./lib/context-index.mjs";
 import {
   assertInside,
   assertNoSymlink,
@@ -31,11 +32,11 @@ const IGNORED_DIRECTORIES = new Set([
   "dist", "node_modules", "target", "vendor"
 ]);
 const MANAGED_CONTEXT = [
-  ["architecture", "architecture/system.md", "System architecture, modules, entrypoints, and detected boundaries.", ["architecture", "modules", "entrypoints"], "high"],
-  ["code-quality", "standards/code-quality.md", "Detected source layout, naming, and engineering conventions.", ["code", "quality", "conventions"], "critical"],
-  ["testing", "standards/testing.md", "Detected test tooling, locations, and repository commands.", ["test", "verification", "commands"], "high"],
-  ["security", "standards/security.md", "Detected security-sensitive boundaries and baseline safeguards.", ["security", "auth", "secrets"], "critical"],
-  ["project-intelligence", "project-intelligence/project.md", "Detected stack, package tooling, CI, and project intelligence.", ["project", "stack", "ci"], "medium"]
+  ["architecture", "architecture/system.md", "System architecture, modules, entrypoints, and detected boundaries.", ["architecture", "modules", "entrypoints"], "high", ["modules", "entrypoints", "conventions.boundaries"]],
+  ["code-quality", "standards/code-quality.md", "Detected source layout, naming, and engineering conventions.", ["code", "quality", "conventions"], "critical", ["conventions", "languages"]],
+  ["testing", "standards/testing.md", "Detected test tooling, locations, and repository commands.", ["test", "verification", "commands"], "high", ["testing", "commands"]],
+  ["security", "standards/security.md", "Detected security-sensitive boundaries and baseline safeguards.", ["security", "auth", "secrets"], "critical", ["security"]],
+  ["project-intelligence", "project-intelligence/project.md", "Detected stack, package tooling, CI, and project intelligence.", ["project", "stack", "ci"], "medium", ["project", "packageManager", "languages", "frameworks", "ciCd"]]
 ];
 const CODEX_AGENT_IGNORE_RULES = [
   ".codex-agent/analysis.json",
@@ -482,6 +483,32 @@ const managedIndexOwnershipConflicts = (existingIndex) => {
   });
 };
 
+const nestedValue = (value, dottedPath) => dottedPath.split(".").reduce((current, key) => current?.[key], value);
+const collectSignalEvidence = (value) => {
+  if (!value || typeof value !== "object") return [];
+  return [
+    ...(Array.isArray(value.evidence) ? value.evidence : []),
+    ...Object.values(value).flatMap((item) => collectSignalEvidence(item))
+  ];
+};
+const managedEvidence = (analysis, id, signalPaths) => {
+  const projectRoot = path.resolve(analysis.root);
+  const locators = unique(signalPaths.flatMap((signalPath) => collectSignalEvidence(nestedValue(analysis, signalPath))))
+    .map((locator) => String(locator).split("#")[0])
+    .filter((locator) => locator && !path.isAbsolute(locator));
+  return unique(locators).flatMap((locator) => {
+    const target = path.resolve(projectRoot, locator);
+    const relativePath = relative(projectRoot, target);
+    if (relativePath.startsWith("../") || path.isAbsolute(relativePath)
+      || relativePath.startsWith(".codex-agent/context/") || relativePath.startsWith(".agents/context/")) return [];
+    try {
+      assertNoSymlink(projectRoot, target, `Managed context evidence ${locator}`);
+      if (!fs.existsSync(target) || !fs.statSync(target).isFile()) return [];
+      return [{ type: "repository", locator: relativePath, note: `Repository evidence used to generate ${id}.`, sha256: sha256(fs.readFileSync(target)) }];
+    } catch { return []; }
+  }).slice(0, 20);
+};
+
 export const renderProjectFiles = (analysis, existingIndex = null) => {
   if (containsSensitiveContent(JSON.stringify({ analysis, existingIndex }))) {
     throw new Error("Project context rendering input appears to contain a secret or credential");
@@ -502,13 +529,24 @@ export const renderProjectFiles = (analysis, existingIndex = null) => {
   ]);
   for (const profile of agentProfiles) files.set(`.codex/agents/${profile.file}`, { kind: "toml", id: `profile-${profile.name}`, body: renderProfile(profile) });
 
-  const priorEntries = Array.isArray(existingIndex?.entries) ? existingIndex.entries : [];
+  const upgradedIndex = upgradeContextIndex(existingIndex ?? { version: 1, entries: [] });
+  const priorEntries = upgradedIndex.entries;
+  const priorByPair = new Map(priorEntries.map((entry) => [`${entry.id}\0${entry.path}`, entry]));
   const managedPairs = new Set(MANAGED_CONTEXT.map(([id, file]) => `${id}\0${file}`));
   const customEntries = priorEntries.filter((entry) => !managedPairs.has(`${entry.id}\0${entry.path}`));
   const index = {
     ...(existingIndex?.$schema ? { $schema: existingIndex.$schema } : {}),
-    version: 1,
-    entries: [...MANAGED_CONTEXT.map(([id, file, summary, tags, priority]) => ({ id, path: file, summary, tags, priority })), ...customEntries]
+    version: 2,
+    entries: [
+      ...MANAGED_CONTEXT.map(([id, file, summary, tags, priority, signalPaths]) => upgradeContextIndexEntry({
+        ...priorByPair.get(`${id}\0${file}`),
+        id, path: file, summary, tags, priority,
+        status: "active",
+        lastVerifiedAt: contextDate(),
+        evidence: managedEvidence(analysis, id, signalPaths)
+      })),
+      ...customEntries
+    ]
   };
   files.set(".codex-agent/context/index.json", { kind: "json", content: `${JSON.stringify(index, null, 2)}\n` });
   for (const [file, descriptor] of files) {

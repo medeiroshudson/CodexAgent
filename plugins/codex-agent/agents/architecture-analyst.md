@@ -63,6 +63,7 @@ Return one status: `READY`, `DECISION_REQUIRED`, or `NEEDS_CONTEXT`, followed by
 4. `Alternatives and tradeoffs` — only credible options.
 5. `Migration and rollback`.
 6. `Decisions required` and implementation consequences.
+7. `Spec inputs` — candidate `NG-*`, `INV-*`, `SEC-*`, `FAIL-*`, and `AO-*` items for the planning skill to accept or revise; this agent does not own the final specification.
 
 ## Avoid
 

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Codex Agent model eval result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "createdAt", "fixtureDigest", "runnerProtocolVersion", "runtimeDigest", "runtime", "variant", "repetitions", "summary", "byCase"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "fixtureDigest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "runnerProtocolVersion": { "const": 1 },
+    "runtimeDigest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "runtime": { "type": "object" },
+    "variant": { "type": "string" },
+    "repetitions": { "type": "integer", "minimum": 1 },
+    "summary": { "type": "object" },
+    "byCase": { "type": "array", "items": { "type": "object" } }
+  }
+}

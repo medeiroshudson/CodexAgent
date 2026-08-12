@@ -54,6 +54,7 @@ test("published tarball runs without the source workspace", () => {
   assert.equal(contextHelp.status, 0, contextHelp.stderr);
   assert.match(contextHelp.stdout, /codex-agent context init/);
   assert.match(contextHelp.stdout, /codex-agent context refresh/);
+  assert.match(contextHelp.stdout, /codex-agent context lint/);
 
   const removedInit = run(process.execPath, [executable, "init"], { cwd: target });
   assert.equal(removedInit.status, 1);
@@ -95,6 +96,13 @@ test("published tarball runs without the source workspace", () => {
   const installedProfiles = fs.readdirSync(path.join(fixture, ".codex", "agents")).filter((name) => name.endsWith(".toml"));
   assert.equal(installedProfiles.length, agentProfiles.length);
   assert.match(fs.readFileSync(path.join(fixture, ".codex", "agents", "context_scout.toml"), "utf8"), /developer_instructions/);
+
+  const lint = run(process.execPath, [executable, "context", "lint", "--json"], { cwd: fixture });
+  assert.equal(lint.status, 0, lint.stderr);
+  const lintResult = JSON.parse(lint.stdout);
+  assert.equal(lintResult.state, "canonical-only");
+  assert.equal(lintResult.summary.entries, 5);
+  assert.equal(lintResult.summary.warnings >= 1, true);
 
   const proposalPath = path.join(target, "proposal.json");
   fs.writeFileSync(proposalPath, JSON.stringify({

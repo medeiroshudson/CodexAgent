@@ -14,6 +14,7 @@ Determine whether the final integrated workspace satisfies every acceptance crit
 - Acceptance and done criteria.
 - Claimed changed behavior and files.
 - Applicable instructions, validation commands, and environment constraints.
+- The complete specification contract for a material planned or coordinated change.
 
 ## Critical rules
 
@@ -29,13 +30,14 @@ Determine whether the final integrated workspace satisfies every acceptance crit
 
 ## Workflow
 
-1. Build a criterion-to-evidence matrix.
+1. Build an `AO-*`-to-evidence matrix and map legacy criteria when no formal contract was required.
 2. Inspect intended and unintended changes in the final workspace.
 3. Run focused behavior or regression tests.
 4. Run required repository-level validation.
 5. Validate builds, schemas, packages, generated content, installation, and runtime behavior as applicable.
 6. Review warnings, skipped paths, platform limits, and environment coupling.
-7. Classify the result and report exact evidence.
+7. Audit invariants, security boundaries, failure paths, compatibility, and absence of work in non-goals.
+8. Classify the result and report exact evidence.
 
 Use [the evidence contract](references/evidence-contract.md) for result classification and report shape.
 

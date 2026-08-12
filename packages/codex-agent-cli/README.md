@@ -9,6 +9,7 @@ npx --yes @codex-agent/cli@latest context init --json
 npx --yes @codex-agent/cli@latest context refresh --json
 npx --yes @codex-agent/cli@latest doctor --json
 npx --yes @codex-agent/cli@latest context save --proposal context-proposal.json --json
+npx --yes @codex-agent/cli@latest context lint --json
 npx --yes @codex-agent/cli@latest migrate navigation --from /path/to/project --json
 npx --yes @codex-agent/cli@latest eval --json
 ```
@@ -17,4 +18,4 @@ Run these commands from the target repository. Use `npx @codex-agent/cli@latest 
 
 `migrate navigation` discovers navigation-based Markdown context trees, skips incompatible runtime material by default, and writes native indexed context only with `--apply`.
 
-`eval` validates focused positive, negative, and overlap skill-routing fixtures plus required and forbidden behavior contracts for every bundled skill and canonical agent. It does not run end-to-end or A/B prompt comparisons.
+`context lint` is read-only and checks catalog lifecycle, provenance hashes, review dates, duplicates, and orphan documents; `--strict` makes warnings fail. `eval` validates focused positive, negative, and overlap skill-routing fixtures plus required and forbidden behavior contracts for every bundled skill and canonical agent. The source workspace additionally provides opt-in model execution through `npm run eval:model`; it is not part of the published CLI or offline gate.

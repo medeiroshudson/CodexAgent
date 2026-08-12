@@ -5,6 +5,7 @@ import path from "node:path";
 import test from "node:test";
 import {
   assertValidContextIndex,
+  upgradeContextIndex,
   validateContextIndex
 } from "../plugins/codex-agent/scripts/lib/context-index.mjs";
 
@@ -24,6 +25,25 @@ const index = (entries = [entry()], overrides = {}) => ({
   ...overrides
 });
 
+const v2Entry = (overrides = {}) => ({
+  ...entry(),
+  kind: "standard",
+  scope: "repository",
+  confidence: "high",
+  status: "active",
+  recordedAt: "2026-08-11",
+  lastVerifiedAt: "2026-08-11",
+  evidence: [{
+    type: "repository",
+    locator: "AGENTS.md",
+    note: "Repository guidance defines the durable rule.",
+    sha256: "a".repeat(64)
+  }],
+  ...overrides
+});
+
+const v2Index = (entries = [v2Entry()], overrides = {}) => index(entries, { version: 2, ...overrides });
+
 const temporaryRoot = (t, prefix = "codex-agent-context-index-") => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
@@ -41,7 +61,7 @@ test("strict context index validation rejects root and entry schema violations d
     [null, ["context index must be an object"]],
     [index(undefined, { unsupported: true }), ["context index has unsupported field: unsupported"]],
     [index(undefined, { $schema: 1 }), ["context index.$schema must be a string"]],
-    [index(undefined, { version: 2 }), ["context index.version must be 1"]],
+    [index(undefined, { version: 3 }), ["context index.version must be 1 or 2"]],
     [{ version: 1, entries: {} }, ["context index.entries must be an array"]],
     [index([null]), ["context index.entries[0] must be an object"]],
     [index([entry({ unsupported: true })]), ["context index.entries[0] has unsupported field: unsupported"]],
@@ -64,6 +84,26 @@ test("strict context index validation rejects root and entry schema violations d
     () => assertValidContextIndex(index([entry({ priority: "urgent" })])),
     new Error("Invalid context index:\n- context index.entries[0].priority must be one of: critical, high, medium, low")
   );
+});
+
+test("context index v2 validates provenance and upgrades v1 deterministically", () => {
+  assert.deepEqual(validateContextIndex(v2Index()), { ok: true, errors: [] });
+  const upgraded = upgradeContextIndex(index(), { recordedAt: "2026-08-11" });
+  assert.equal(upgraded.version, 2);
+  assert.deepEqual(upgraded.entries[0], {
+    ...entry(),
+    kind: "standard",
+    scope: "standards",
+    confidence: "unknown",
+    status: "active",
+    recordedAt: "2026-08-11",
+    lastVerifiedAt: "2026-08-11"
+  });
+  assert.deepEqual(validateContextIndex(v2Index([v2Entry({ evidence: [{
+    type: "external",
+    locator: "http://example.com/source",
+    note: "External source for this context."
+  }] })])).errors, ["context index.entries[0].evidence[0].locator must use https"]);
 });
 
 test("strict context index validation requires normalized portable Markdown paths", () => {

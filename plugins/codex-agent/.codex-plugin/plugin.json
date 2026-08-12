@@ -31,6 +31,7 @@
       "Use $agent-orchestration to coordinate this complex repository change from context discovery through fresh verification.",
       "Use $code-review to return evidence-backed correctness, security, compatibility, and test findings without editing.",
       "Use $context-discovery to find the smallest verified repository context packet before implementation.",
+      "Use $context-lint to audit indexed context health, provenance, review dates, conflicts, duplicates, and orphans without writing or using the network.",
       "Use $context-init to preview the first evidence-backed canonical Codex context and native agent profiles for this repository.",
       "Use $context-refresh to preview reconciliation of initialized canonical context with current repository evidence.",
       "Use $context-harvest to extract temporary durable-knowledge candidates from an explicitly selected resumable handoff without automatic promotion.",

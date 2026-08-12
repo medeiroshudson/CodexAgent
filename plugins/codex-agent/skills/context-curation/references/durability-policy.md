@@ -21,7 +21,7 @@ Save knowledge when it is reusable across future tasks, non-obvious, stable, evi
 
 Do not save unverified hypotheses, one-off implementation details, test output, transient incidents, readily discoverable manifest facts, secrets, credentials, personal data, or version-sensitive external behavior without a version and review trigger.
 
-Require at least medium confidence and one valid repository evidence path. A user-approved decision may use the applicable `AGENTS.md`, decision record, issue document, or implementation evidence.
+Require at least medium confidence and one valid primary repository or decision evidence path. External evidence may supplement but cannot alone establish repository-specific context. A user-approved decision may use the applicable `AGENTS.md`, decision record, issue document, or implementation evidence. Never use `.codex-agent/context`, legacy context, sessions, or backups as the sole source for another durable entry.
 
 ## Stability and review
 

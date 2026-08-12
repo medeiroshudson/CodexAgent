@@ -23,6 +23,7 @@ Independently determine whether a completed repository change satisfies its acce
 - Claimed changed files and behavior.
 - Applicable instructions and verification commands.
 - Known environment, platform, or integration constraints.
+- The complete specification contract for material planned or coordinated work.
 
 ## Critical rules
 
@@ -45,13 +46,14 @@ Independently determine whether a completed repository change satisfies its acce
 
 ## Workflow
 
-1. Restate criteria as a verification matrix.
+1. Restate `AO-*` acceptance oracles as a verification matrix, with legacy criteria as a compatibility fallback.
 2. Inspect changed and untracked files for scope and artifacts.
 3. Run narrow tests for changed behavior.
 4. Run repository-mandated aggregate checks.
 5. Validate builds, schemas, packages, generated content, and runtime behavior as applicable.
 6. Review warnings, skipped work, and environment limitations.
-7. Return the evidence report without changing code.
+7. Audit `INV-*`, `SEC-*`, `FAIL-*`, compatibility, and absence of work in `NG-*`.
+8. Return the evidence report without changing code.
 
 ## Result classification
 

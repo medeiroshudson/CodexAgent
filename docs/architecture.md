@@ -22,7 +22,8 @@
 | `context-curation/scripts/context-save.mjs` | Deterministic context validation, storage, backup, and index coordination |
 | `context-curation/scripts/navigation-migrate.mjs` | Navigation-tree filtering, transformation, and indexed migration |
 | `packages/codex-agent-cli/` | Thin deterministic CLI for context lifecycle, diagnosis, migration, storage, and indexing |
-| `evals/` | Routing and behavioral contracts; no E2E or A/B prompt comparison |
+| `context-lint/scripts/context-lint.mjs` | Read-only deterministic catalog, provenance, lifecycle, duplicate, and orphan health checks |
+| `evals/` | Offline structural contracts plus an opt-in external-runner model eval and comparable baseline protocol |
 
 The plugin does not distribute `commands/*.md`. Skills are the portable interactive surface across the Codex app, CLI, and IDE extension.
 
@@ -49,6 +50,8 @@ The shared resolver classifies the repository as `none`, `legacy-only`, `canonic
 - `.agents/plugins/marketplace.json` and `.agents/skills/` remain intact.
 
 Context and managed-project changes acquire a global lock, stage all files, persist hash-verified recovery manifests, and promote the index last. Legacy initialization also keeps an umbrella lifecycle journal across catalog migration and managed writes. Ordinary failures restore prior files. After interruption, a new writer reclaims a lock only when its owner is provably local and dead, recovers the child transaction first, then commits a fully promoted lifecycle forward or restores the original catalog state. Backups, locks, transactions, analysis, and sessions are ignored; `.codex-agent/context/` remains versionable.
+
+Index readers accept strict v1 and v2 contracts. Writers emit v2 and preserve existing metadata while adding lifecycle, confidence, dates, relations, and typed provenance. Repository and decision evidence hashes are recalculated from primary files. Selection projects only retrieval and health fields, so provenance URLs, notes, and hashes are not copied into task packets. `context lint` derives health without mutation or network access.
 
 ## Project context lifecycle
 

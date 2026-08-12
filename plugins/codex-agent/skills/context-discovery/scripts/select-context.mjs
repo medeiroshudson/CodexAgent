@@ -4,12 +4,38 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { getReadableContextCatalog } from "../../../scripts/lib/context-catalog.mjs";
 
-const priorityWeight = { critical: 30, high: 20, medium: 10, low: 0 };
+const priorityWeight = { critical: 4, high: 3, medium: 2, low: 1 };
+const fieldWeights = { aliases: 16, tags: 14, id: 12, path: 12, scope: 10, kind: 10, summary: 6 };
 
-export const selectContext = ({ root, query = "", limit = 5 }) => {
+const normalize = (value) => String(value ?? "")
+  .normalize("NFKD")
+  .replace(/\p{M}+/gu, "")
+  .toLocaleLowerCase("en-US");
+
+const tokens = (value) => normalize(value).match(/[\p{L}\p{N}_]+/gu)?.filter((term) => term.length > 1) ?? [];
+
+const projectedEntry = ({ entry, absolutePath, score, matches, reasons, reviewDue, indexVersion }) => ({
+  id: entry.id,
+  path: entry.path,
+  summary: entry.summary,
+  tags: entry.tags,
+  priority: entry.priority,
+  ...(entry.kind ? { kind: entry.kind } : {}),
+  ...(entry.scope ? { scope: entry.scope } : {}),
+  ...(entry.confidence ? { confidence: entry.confidence } : {}),
+  status: entry.status ?? "active",
+  health: indexVersion === 1 ? "unknown" : reviewDue ? "review-due" : "healthy",
+  valid: true,
+  score,
+  matches,
+  reasons,
+  absolutePath
+});
+
+export const selectContext = ({ root, query = "", limit = 5, now = new Date() }) => {
   const catalog = getReadableContextCatalog({ root });
-  const normalizedQuery = String(query).toLowerCase();
-  const normalizedLimit = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : 5;
+  const normalizedQuery = normalize(query).trim();
+  const normalizedLimit = Math.min(20, Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : 5);
   if (!catalog.index) {
     return {
       root: catalog.root,
@@ -21,18 +47,57 @@ export const selectContext = ({ root, query = "", limit = 5 }) => {
     };
   }
 
-  const terms = new Set(normalizedQuery.split(/[^a-z0-9_-]+/).filter((term) => term.length > 2));
-  const entries = catalog.index.entries.map((entry) => {
-    const candidate = path.join(catalog.contextRoot, ...entry.path.split("/"));
-    const haystack = [entry.id, entry.summary, ...(entry.tags ?? [])].join(" ").toLowerCase();
-    const matches = [...terms].filter((term) => haystack.includes(term));
-    const score = (priorityWeight[entry.priority] ?? 0) + matches.length * 10;
-    return { ...entry, valid: true, score, matches, absolutePath: candidate };
-  });
+  const queryTerms = new Set(tokens(normalizedQuery));
+  const warnings = [...catalog.warnings];
+  const candidates = [];
+  for (const entry of catalog.index.entries) {
+    if (entry.status === "superseded") continue;
+    if (entry.status === "conflicted") {
+      warnings.push(`context entry skipped because it is conflicted: ${entry.id}`);
+      continue;
+    }
+    const fields = {
+      aliases: entry.aliases ?? [],
+      tags: entry.tags ?? [],
+      id: [entry.id],
+      path: [entry.path],
+      scope: [entry.scope],
+      kind: [entry.kind],
+      summary: [entry.summary]
+    };
+    const matchedTerms = new Set();
+    const reasons = [];
+    let score = 0;
+    for (const [field, values] of Object.entries(fields)) {
+      const fieldTerms = new Set(values.flatMap(tokens));
+      const matched = [...queryTerms].filter((term) => fieldTerms.has(term)).sort();
+      if (!matched.length) continue;
+      matched.forEach((term) => matchedTerms.add(term));
+      const contribution = matched.length * fieldWeights[field];
+      score += contribution;
+      reasons.push({ field, terms: matched, score: contribution });
+    }
+    if (!matchedTerms.size) continue;
+    const reviewDue = Boolean(entry.reviewAfter && entry.reviewAfter <= now.toISOString().slice(0, 10));
+    if (reviewDue) {
+      score -= 15;
+      reasons.push({ field: "health", terms: ["review-due"], score: -15 });
+    }
+    candidates.push(projectedEntry({
+      entry,
+      absolutePath: path.join(catalog.contextRoot, ...entry.path.split("/")),
+      score,
+      matches: [...matchedTerms].sort(),
+      reasons,
+      reviewDue,
+      indexVersion: catalog.index.version
+    }));
+  }
 
-  const selected = entries
-    .filter((entry) => entry.priority === "critical" || entry.matches.length > 0)
-    .sort((left, right) => right.score - left.score || left.path.localeCompare(right.path))
+  const selected = candidates
+    .sort((left, right) => right.score - left.score
+      || (priorityWeight[right.priority] ?? 0) - (priorityWeight[left.priority] ?? 0)
+      || left.path.localeCompare(right.path))
     .slice(0, normalizedLimit);
 
   return {
@@ -41,7 +106,7 @@ export const selectContext = ({ root, query = "", limit = 5 }) => {
     state: catalog.state,
     source: catalog.source,
     contextRoot: catalog.contextRoot,
-    warnings: catalog.warnings,
+    warnings,
     entries: selected
   };
 };

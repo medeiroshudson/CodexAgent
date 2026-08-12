@@ -2,12 +2,14 @@
 
 ## Criterion matrix
 
-For every acceptance criterion, record:
+For every `AO-*` acceptance oracle (or legacy acceptance criterion), record:
 
 - observable check;
 - command, inspection, or interaction;
 - fresh outcome;
 - confidence and remaining gap.
+
+Also record the referenced `INV-*`, `SEC-*`, and `FAIL-*` contracts the evidence exercises. Inspect the diff for work prohibited by `NG-*`. An oracle passes only when its expected observation is present at the declared validation surface.
 
 ## Result classification
 

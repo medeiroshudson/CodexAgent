@@ -21,6 +21,7 @@ Convert approved multi-component scope into an executable task graph whose nodes
 
 - Approved outcome and scope.
 - Acceptance or exit criteria.
+- The approved specification contract for material coordinated work.
 - Active instructions and selected context paths.
 - Relevant architecture, source, test, and external-contract evidence.
 - Known constraints, risks, and user-owned worktree boundaries.
@@ -64,6 +65,7 @@ Each task contains:
 - `outcome`
 - `scope` with included and excluded behavior
 - `context` with instruction, standard, and reference paths
+- `specRefs` with only the relevant `NG-*`, `INV-*`, `SEC-*`, `FAIL-*`, and `AO-*` identifiers
 - `inputs` and expected `outputs`
 - `dependsOn`
 - `parallelSafe` with overlap rationale

@@ -20,13 +20,27 @@
       "minItems": 1,
       "maxItems": 20,
       "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["path", "note"],
-        "properties": {
-          "path": { "type": "string", "minLength": 1, "maxLength": 300 },
-          "note": { "type": "string", "minLength": 5, "maxLength": 300 }
-        }
+        "oneOf": [
+          {
+            "type": "object", "additionalProperties": false, "required": ["path", "note"],
+            "properties": { "path": { "type": "string", "minLength": 1, "maxLength": 300 }, "note": { "type": "string", "minLength": 5, "maxLength": 300 } }
+          },
+          {
+            "type": "object", "additionalProperties": false, "required": ["type", "path", "note"],
+            "properties": {
+              "type": { "enum": ["repository", "decision"] }, "path": { "type": "string", "minLength": 1, "maxLength": 300 },
+              "note": { "type": "string", "minLength": 5, "maxLength": 300 }, "decisionId": { "type": "string" }, "decidedAt": { "type": "string", "format": "date" }
+            }
+          },
+          {
+            "type": "object", "additionalProperties": false, "required": ["type", "url", "note"],
+            "properties": {
+              "type": { "const": "external" }, "url": { "type": "string", "format": "uri", "pattern": "^https://" },
+              "note": { "type": "string", "minLength": 5, "maxLength": 300 }, "title": { "type": "string" }, "version": { "type": "string" },
+              "retrievedAt": { "type": "string", "format": "date" }, "publishedAt": { "type": "string", "format": "date" }
+            }
+          }
+        ]
       }
     },
     "tags": {
@@ -42,6 +56,9 @@
       "type": "array",
       "maxItems": 5,
       "items": { "type": "string", "minLength": 5, "maxLength": 240 }
-    }
+    },
+    "reviewAfter": { "type": "string", "format": "date" },
+    "aliases": { "type": "array", "maxItems": 20, "uniqueItems": true, "items": { "type": "string", "minLength": 2 } },
+    "supersedes": { "type": "array", "maxItems": 20, "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" } }
   }
 }

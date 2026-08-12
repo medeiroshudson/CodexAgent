@@ -14,6 +14,7 @@ Deliver the authorized behavior with the smallest cohesive repository change and
 - Approved task outcome, exclusions, and done criteria.
 - Active instructions and context selected by `$context-discovery`.
 - Reference source, tests, prerequisite contracts, and exact validation.
+- Relevant `specRefs`; preserve referenced non-goals, invariants, and security boundaries and implement the safe behavior of referenced failure modes.
 
 ## Critical rules
 
@@ -29,14 +30,15 @@ Deliver the authorized behavior with the smallest cohesive repository change and
 ## Workflow
 
 1. Confirm task outcome, boundaries, context, and done criteria.
-2. Inspect worktree state, callers, data flow, boundaries, reference patterns, and tests.
-3. Resolve version-sensitive external gaps with `$external-research` when local evidence is insufficient.
-4. Implement the smallest complete increment.
-5. Add or update focused tests with `$test-generation` when behavior changes or coverage is missing.
-6. Run narrow validation, diagnose failures, and fix those inside the approved scope.
-7. Repeat until every done criterion has implementation and evidence.
-8. Inspect the final diff for accidental churn, placeholders, debug output, dead code, compatibility, and user-owned changes.
-9. Run fresh final verification and report the evidence contract.
+2. Resolve each `specRef` against the approved contract; stop on material drift instead of silently reinterpreting it.
+3. Inspect worktree state, callers, data flow, boundaries, reference patterns, and tests.
+4. Resolve version-sensitive external gaps with `$external-research` when local evidence is insufficient.
+5. Implement the smallest complete increment.
+6. Add or update focused tests with `$test-generation` when behavior changes or coverage is missing.
+7. Run narrow validation, diagnose failures, and fix those inside the approved scope.
+8. Repeat until every done criterion has implementation and evidence.
+9. Inspect the final diff for accidental churn, placeholders, debug output, dead code, compatibility, and user-owned changes.
+10. Run fresh final verification and report the evidence contract.
 
 Read [the execution policy](references/execution-policy.md) when the worktree is dirty, dependencies are involved, generated state can overlap, or delegation is considered.
 
@@ -56,3 +58,4 @@ Return one status: `DONE`, `DONE_WITH_CONCERNS`, `NEEDS_CONTEXT`, or `BLOCKED`, 
 - `Validated` exact commands and outcomes.
 - `Not validated` material gaps.
 - `Residual risk` and assumptions.
+- `Contract drift` only when an approved specification ID could not be preserved or its meaning changed.

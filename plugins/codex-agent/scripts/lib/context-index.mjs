@@ -3,16 +3,62 @@ import path from "node:path";
 import { containsSensitiveContent } from "./safe-files.mjs";
 
 const ROOT_FIELDS = new Set(["$schema", "version", "entries"]);
-const ENTRY_FIELDS = new Set(["id", "path", "summary", "tags", "priority"]);
+const BASE_ENTRY_FIELDS = ["id", "path", "summary", "tags", "priority"];
+const V1_ENTRY_FIELDS = new Set(BASE_ENTRY_FIELDS);
+const V2_ENTRY_FIELDS = new Set([
+  ...BASE_ENTRY_FIELDS,
+  "kind", "scope", "confidence", "status", "recordedAt", "lastVerifiedAt",
+  "reviewAfter", "aliases", "related", "supersedes", "supersededBy", "evidence"
+]);
 const PRIORITIES = ["critical", "high", "medium", "low"];
+const KINDS = ["architecture", "standard", "project", "decision", "constraint", "operation", "domain", "pitfall", "imported"];
+const CONFIDENCE = ["high", "medium", "low", "unknown"];
+const STATUSES = ["active", "conflicted", "superseded"];
+const EVIDENCE_TYPES = ["repository", "external", "decision"];
 const ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const PATH_PATTERN = /^(?!\/)(?!.*\.\.\/).+\.md$/;
 const TAG_PATTERN = /^[a-z0-9_-]+$/;
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const SHA_PATTERN = /^[0-9a-f]{64}$/;
 const CONTROL_CHARACTERS = /[\u0000-\u001f\u007f\u2028\u2029]/;
 
 const isObject = (value) => Boolean(value) && typeof value === "object" && !Array.isArray(value);
 const unsupportedFields = (value, allowed) => Object.keys(value).filter((field) => !allowed.has(field)).sort();
 const codePointLength = (value) => [...value].length;
+const isDateString = (value) => typeof value === "string" && DATE_PATTERN.test(value)
+  && !Number.isNaN(Date.parse(`${value}T00:00:00Z`))
+  && new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) === value;
+
+export const contextDate = (date = new Date()) => date.toISOString().slice(0, 10);
+
+export const inferContextKind = (entryPath) => {
+  const normalized = String(entryPath ?? "").toLowerCase();
+  if (normalized.startsWith("architecture/")) return "architecture";
+  if (normalized.startsWith("standards/")) return "standard";
+  if (normalized.startsWith("project-intelligence/")) return "project";
+  if (normalized.startsWith("decisions/")) return "decision";
+  if (normalized.startsWith("constraints/")) return "constraint";
+  if (normalized.startsWith("operations/")) return "operation";
+  if (normalized.startsWith("domain/")) return "domain";
+  if (normalized.startsWith("pitfalls/")) return "pitfall";
+  return "imported";
+};
+
+export const upgradeContextIndexEntry = (entry, { recordedAt = contextDate() } = {}) => ({
+  ...entry,
+  kind: entry.kind ?? inferContextKind(entry.path),
+  scope: entry.scope ?? (String(entry.path ?? "").split("/").slice(0, -1).join("/") || "repository"),
+  confidence: entry.confidence ?? "unknown",
+  status: entry.status ?? "active",
+  recordedAt: entry.recordedAt ?? recordedAt,
+  lastVerifiedAt: entry.lastVerifiedAt ?? recordedAt
+});
+
+export const upgradeContextIndex = (index, options = {}) => ({
+  ...(index?.$schema ? { $schema: index.$schema } : {}),
+  version: 2,
+  entries: (index?.entries ?? []).map((entry) => upgradeContextIndexEntry(entry, options))
+});
 
 const isContextPath = (value) => typeof value === "string"
   && !value.includes("\\")
@@ -198,8 +244,8 @@ export const validateContextIndex = (value, options = {}) => {
   if (Object.hasOwn(value, "$schema") && typeof value.$schema !== "string") {
     errors.push("context index.$schema must be a string");
   }
-  if (!Object.hasOwn(value, "version") || value.version !== 1) {
-    errors.push("context index.version must be 1");
+  if (!Object.hasOwn(value, "version") || ![1, 2].includes(value.version)) {
+    errors.push("context index.version must be 1 or 2");
   }
   if (!Object.hasOwn(value, "entries") || !Array.isArray(value.entries)) {
     errors.push("context index.entries must be an array");
@@ -209,13 +255,16 @@ export const validateContextIndex = (value, options = {}) => {
   const ids = new Set();
   const paths = new Set();
   const filesystemPaths = [];
+  const relationships = [];
+  const entryItems = new Map();
   for (const [position, item] of value.entries.entries()) {
     const label = `context index.entries[${position}]`;
     if (!isObject(item)) {
       errors.push(`${label} must be an object`);
       continue;
     }
-    for (const field of unsupportedFields(item, ENTRY_FIELDS)) {
+    const entryFields = value.version === 2 ? V2_ENTRY_FIELDS : V1_ENTRY_FIELDS;
+    for (const field of unsupportedFields(item, entryFields)) {
       errors.push(`${label} has unsupported field: ${field}`);
     }
 
@@ -226,6 +275,7 @@ export const validateContextIndex = (value, options = {}) => {
       errors.push(`context index has duplicate id: ${item.id}`);
     } else {
       ids.add(item.id);
+      entryItems.set(item.id, item);
     }
 
     const validPath = Object.hasOwn(item, "path") && isContextPath(item.path);
@@ -263,6 +313,131 @@ export const validateContextIndex = (value, options = {}) => {
 
     if (!Object.hasOwn(item, "priority") || !PRIORITIES.includes(item.priority)) {
       errors.push(`${label}.priority must be one of: ${PRIORITIES.join(", ")}`);
+    }
+
+    if (value.version === 2) {
+      if (!Object.hasOwn(item, "kind") || !KINDS.includes(item.kind)) {
+        errors.push(`${label}.kind must be one of: ${KINDS.join(", ")}`);
+      }
+      if (!Object.hasOwn(item, "scope") || typeof item.scope !== "string"
+        || codePointLength(item.scope) < 2 || codePointLength(item.scope) > 120) {
+        errors.push(`${label}.scope must be a string between 2 and 120 characters`);
+      }
+      if (!Object.hasOwn(item, "confidence") || !CONFIDENCE.includes(item.confidence)) {
+        errors.push(`${label}.confidence must be one of: ${CONFIDENCE.join(", ")}`);
+      }
+      if (!Object.hasOwn(item, "status") || !STATUSES.includes(item.status)) {
+        errors.push(`${label}.status must be one of: ${STATUSES.join(", ")}`);
+      }
+      for (const dateField of ["recordedAt", "lastVerifiedAt"]) {
+        if (!Object.hasOwn(item, dateField) || !isDateString(item[dateField])) {
+          errors.push(`${label}.${dateField} must use YYYY-MM-DD`);
+        }
+      }
+      if (item.reviewAfter !== undefined && !isDateString(item.reviewAfter)) {
+        errors.push(`${label}.reviewAfter must use YYYY-MM-DD`);
+      }
+
+      for (const field of ["aliases", "related", "supersedes", "supersededBy"]) {
+        if (item[field] === undefined) continue;
+        if (!Array.isArray(item[field]) || item[field].length > 20) {
+          errors.push(`${label}.${field} must be an array with at most 20 values`);
+          continue;
+        }
+        const seen = new Set();
+        for (const [relationPosition, relation] of item[field].entries()) {
+          const validRelation = typeof relation === "string" && (field === "aliases" ? relation.trim().length >= 2 : ID_PATTERN.test(relation));
+          if (!validRelation) errors.push(`${label}.${field}[${relationPosition}] is invalid`);
+          if (seen.has(relation)) errors.push(`${label}.${field} must contain unique values: ${relation}`);
+          seen.add(relation);
+          if (field !== "aliases" && relation === item.id) errors.push(`${label}.${field} must not reference its own id`);
+          if (field !== "aliases" && validRelation) relationships.push({ label, field, target: relation });
+        }
+      }
+
+      if (item.evidence !== undefined) {
+        if (!Array.isArray(item.evidence) || item.evidence.length > 20) {
+          errors.push(`${label}.evidence must be an array with at most 20 values`);
+        } else for (const [evidencePosition, evidence] of item.evidence.entries()) {
+          const evidenceLabel = `${label}.evidence[${evidencePosition}]`;
+          if (!isObject(evidence)) {
+            errors.push(`${evidenceLabel} must be an object`);
+            continue;
+          }
+          for (const field of unsupportedFields(evidence, new Set([
+            "type", "locator", "note", "title", "version", "sha256", "retrievedAt", "publishedAt", "decidedAt", "decisionId"
+          ]))) {
+            errors.push(`${evidenceLabel} has unsupported field: ${field}`);
+          }
+          if (!EVIDENCE_TYPES.includes(evidence.type)) errors.push(`${evidenceLabel}.type is invalid`);
+          if (typeof evidence.locator !== "string" || !evidence.locator || evidence.locator.length > 500) {
+            errors.push(`${evidenceLabel}.locator must be a non-empty string of at most 500 characters`);
+          } else if (evidence.type === "external") {
+            try {
+              const url = new URL(evidence.locator);
+              if (url.protocol !== "https:") errors.push(`${evidenceLabel}.locator must use https`);
+              if (url.username || url.password) errors.push(`${evidenceLabel}.locator must not contain credentials`);
+            } catch {
+              errors.push(`${evidenceLabel}.locator must be an absolute URL`);
+            }
+          } else if (path.posix.isAbsolute(evidence.locator) || path.posix.normalize(evidence.locator) !== evidence.locator
+            || evidence.locator.includes("\\") || evidence.locator.startsWith("../")) {
+            errors.push(`${evidenceLabel}.locator must be a normalized repository-relative path`);
+          }
+          if (typeof evidence.note !== "string" || evidence.note.trim().length < 5 || evidence.note.length > 300) {
+            errors.push(`${evidenceLabel}.note must be a string between 5 and 300 characters`);
+          }
+          if (["repository", "decision"].includes(evidence.type) && !SHA_PATTERN.test(evidence.sha256 ?? "")) {
+            errors.push(`${evidenceLabel}.sha256 is required for repository evidence`);
+          } else if (evidence.sha256 !== undefined && !SHA_PATTERN.test(evidence.sha256)) {
+            errors.push(`${evidenceLabel}.sha256 is invalid`);
+          }
+          for (const dateField of ["retrievedAt", "publishedAt", "decidedAt"]) {
+            if (evidence[dateField] !== undefined && !isDateString(evidence[dateField])) {
+              errors.push(`${evidenceLabel}.${dateField} must use YYYY-MM-DD`);
+            }
+          }
+          for (const textField of ["title", "version", "decisionId"]) {
+            if (evidence[textField] !== undefined && (typeof evidence[textField] !== "string" || !evidence[textField].trim() || evidence[textField].length > 200)) {
+              errors.push(`${evidenceLabel}.${textField} must be a non-empty string of at most 200 characters`);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  if (value.version === 2) {
+    for (const relationship of relationships) {
+      if (!ids.has(relationship.target)) errors.push(`${relationship.label}.${relationship.field} references unknown id: ${relationship.target}`);
+    }
+    for (const [id, item] of entryItems) {
+      for (const targetId of item.supersedes ?? []) {
+        const target = entryItems.get(targetId);
+        if (target && !(target.supersededBy ?? []).includes(id)) errors.push(`context index supersession is asymmetric: ${id} supersedes ${targetId}`);
+        if (target && target.status !== "superseded") errors.push(`context index superseded entry must have status superseded: ${targetId}`);
+      }
+      for (const targetId of item.supersededBy ?? []) {
+        const target = entryItems.get(targetId);
+        if (target && !(target.supersedes ?? []).includes(id)) errors.push(`context index supersession is asymmetric: ${id} is superseded by ${targetId}`);
+      }
+    }
+    const visiting = new Set();
+    const visited = new Set();
+    const visit = (id) => {
+      if (visiting.has(id)) return true;
+      if (visited.has(id)) return false;
+      visiting.add(id);
+      for (const target of entryItems.get(id)?.supersedes ?? []) if (entryItems.has(target) && visit(target)) return true;
+      visiting.delete(id);
+      visited.add(id);
+      return false;
+    };
+    for (const id of entryItems.keys()) {
+      if (visit(id)) {
+        errors.push(`context index supersession graph contains a cycle involving: ${id}`);
+        break;
+      }
     }
   }
 

@@ -48,7 +48,7 @@ Coordinate a repository change as one traceable delivery flow while keeping spec
 4. **Resolve design** — use `architecture_analyst` when public contracts, persistent data, permissions, ownership, or rollout materially change.
 5. **Align authority** — plan only when needed; stop only for a new high-impact decision outside current authority.
 6. **Decompose** — produce dependency-aware task packets and a coordination plan for multi-component work.
-7. **Delegate** — pass each worker only outcome, exclusions, authority, selected paths, prerequisite outputs, acceptance criteria, and validation. Do not pass the whole session or transcript.
+7. **Delegate** — keep the complete specification contract with the orchestrator/integrator/verifier; pass each worker only outcome, authority, selected paths, prerequisite outputs, validation, and relevant `specRefs`. Do not pass the whole session or transcript.
 8. **Reconcile** — inspect each result, verify claimed artifacts, and ask the sole session writer to apply a revision-checked delta when resumable.
 9. **Integrate** — inspect combined state, resolve in-scope failures, and confirm prerequisite contracts match consumers.
 10. **Review and verify** — apply focused review and run fresh proportional validation from the integrated state.
@@ -63,6 +63,7 @@ Every delegated task receives:
 - active instruction and explicitly selected context paths;
 - reference files and prerequisite output paths;
 - acceptance criteria and exact validation;
+- relevant `specRefs`; the complete specification contract goes only to integration and final verification;
 - known risks, user-owned files, and unresolved constraints;
 - expected return status, changed artifacts, decisions, evidence, and candidate learnings.
 

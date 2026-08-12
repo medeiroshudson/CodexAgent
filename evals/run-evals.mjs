@@ -15,5 +15,5 @@ if (failures.length) {
 } else {
   process.stdout.write(`Validated ${routing.scenarios} routing scenarios across ${routing.skills} skills (${routing.byKind.positive} positive, ${routing.byKind.negative} negative, ${routing.byKind.overlap} overlap).\n`);
   process.stdout.write(`Validated ${behavior.scenarios} focused behavior contracts across ${behavior.skills} skills and ${behavior.agents} agents.\n`);
-  process.stdout.write("Use the official plugin-eval flow to execute focused model-based behavior checks; this suite intentionally excludes E2E and A/B evaluation.\n");
+  process.stdout.write("Run npm run eval:model with an externally configured runner for model-based execution, sanitized baselines, and comparable A/B results.\n");
 }

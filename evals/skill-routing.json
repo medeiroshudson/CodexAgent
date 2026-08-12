@@ -337,6 +337,24 @@
       "prompt": "Coordinate the approved feature across components and resolve the version-sensitive external library contract before implementation.",
       "expectedSkill": "agent-orchestration",
       "expectedSkills": ["agent-orchestration", "external-research", "implementation", "verification-before-completion"]
+    },
+    {
+      "id": "lint-context-health",
+      "kind": "positive",
+      "prompt": "Audit the canonical context catalog for stale provenance hashes, review dates, duplicates, conflicts, and orphan Markdown without changing anything.",
+      "expectedSkill": "context-lint"
+    },
+    {
+      "id": "lint-context-strict",
+      "kind": "positive",
+      "prompt": "Run a strict read-only context health check and fail on warnings, but do not fetch external sources or repair the catalog.",
+      "expectedSkill": "context-lint"
+    },
+    {
+      "id": "negative-context-lint-curation",
+      "kind": "negative",
+      "prompt": "Apply this approved durable context proposal transactionally and update the canonical index.",
+      "excludedSkills": ["context-lint"]
     }
   ]
 }

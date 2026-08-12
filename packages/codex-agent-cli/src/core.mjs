@@ -32,6 +32,7 @@ import {
   discoverNavigationContext,
   migrateNavigationContext
 } from "../../../plugins/codex-agent/skills/context-curation/scripts/navigation-migrate.mjs";
+import { lintContext } from "../../../plugins/codex-agent/skills/context-lint/scripts/context-lint.mjs";
 
 export {
   analyzeProject,
@@ -39,6 +40,7 @@ export {
   buildContextIndex,
   discoverNavigationContext,
   initializeContext,
+  lintContext,
   migrateNavigationContext,
   normalizeContextProposal,
   prepareContextIndex,

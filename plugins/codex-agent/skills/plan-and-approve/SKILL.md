@@ -36,7 +36,8 @@ Produce the smallest evidence-backed approach that resolves material design choi
 5. Propose the recommended approach with important files and sequencing.
 6. Compare credible alternatives and explain why the recommendation fits this repository.
 7. Define acceptance criteria, proportional validation, rollout, rollback, and residual risk.
-8. State the exact decision being requested and what implementation authority it grants.
+8. Assemble the in-memory [specification contract](references/spec-contract.md) with stable IDs and acceptance oracles.
+9. State the exact decision being requested and what implementation authority it grants.
 
 ## Approval decisions
 
@@ -52,6 +53,7 @@ Return:
 - `Alternatives and tradeoffs`, when material.
 - `Acceptance and validation`.
 - `Migration, rollback, and risk`.
+- `Specification contract` with non-goals, invariants, security boundaries, failure modes, compatibility, and acceptance oracles.
 - `Decision required` or `Already authorized`.
 
 After approval, use `$task-breakdown` for multi-component work or `$implementation` for a small cohesive change.

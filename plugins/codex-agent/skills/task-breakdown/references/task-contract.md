@@ -6,6 +6,7 @@ Each task contains:
 - `outcome`: one observable result.
 - `scope`: included and excluded behavior.
 - `context`: applicable instruction, standard, architecture, and reference paths.
+- `specRefs`: only the `NG-*`, `INV-*`, `SEC-*`, `FAIL-*`, and `AO-*` identifiers relevant to this task.
 - `inputs`: prerequisite decisions, contracts, and outputs.
 - `outputs`: changed behavior, files, schemas, or artifacts the next task can consume.
 - `dependsOn`: task identifiers that must finish first.
@@ -36,6 +37,7 @@ Before publishing the task graph, verify:
 - the critical path is visible;
 - integration and final verification are explicit;
 - no task hides a material product or architecture decision;
+- every specification ID maps to an owning task, integration check, or final verification oracle;
 - tasks remain small enough for one focused agent turn.
 
 Do not create task artifacts unless the user requests durable planning or the workflow genuinely requires cross-session handoff.

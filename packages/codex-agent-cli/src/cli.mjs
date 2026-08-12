@@ -6,6 +6,7 @@ import {
   evaluateBehaviorContracts,
   evaluateRouting,
   initializeContext,
+  lintContext,
   migrateContext,
   migrateNavigationContext,
   refreshContext,
@@ -30,6 +31,7 @@ Usage:
   codex-agent context init [--root PATH] [--analysis FILE] [--apply --plan-hash HASH] [--force] [--json]
   codex-agent context refresh [--root PATH] [--analysis FILE] [--apply --plan-hash HASH] [--force] [--json]
   codex-agent context index [--root PATH] [--dry-run] [--json]
+  codex-agent context lint [--root PATH] [--strict] [--json]
   codex-agent context save --proposal FILE [--root PATH] [--apply] [--update] [--json]
 
 Both init and refresh preview by default. Apply the exact reviewed preview by passing --apply with its planHash.`;
@@ -50,6 +52,7 @@ const FLAG_KEYS = new Map([
   ["--include-templates", "includeTemplates"],
   ["--include-workflows", "includeWorkflows"],
   ["--json", "json"],
+  ["--strict", "strict"],
   ["--update", "update"]
 ]);
 
@@ -122,7 +125,7 @@ export const main = async (args) => {
       return;
     }
     if (contextArgs.includes("--help") || contextArgs.includes("-h")) {
-      if (!["init", "refresh", "index", "save"].includes(subcommand)) {
+      if (!["init", "refresh", "index", "lint", "save"].includes(subcommand)) {
         throw new Error(`Unknown context command: ${subcommand}\n\n${contextUsage}`);
       }
       write(contextUsage, false);
@@ -152,6 +155,18 @@ export const main = async (args) => {
       });
       const result = buildContextIndex(options);
       write({ path: result.path, entries: result.index.entries.length, dryRun: result.dryRun }, options.json);
+      return;
+    }
+
+    if (subcommand === "lint") {
+      const options = parseOptions(contextArgs, {
+        command: "context lint",
+        options: ["--root"],
+        flags: ["--strict", "--json"]
+      });
+      const result = lintContext(options);
+      write(result, options.json);
+      if (!result.ok) process.exitCode = 1;
       return;
     }
 

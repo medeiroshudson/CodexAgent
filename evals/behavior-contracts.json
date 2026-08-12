@@ -10,6 +10,7 @@
         "Select repository context before implementation decisions.",
         "Keep state ephemeral unless resumability is explicitly requested in natural language, then use an orchestrator-only session writer.",
         "Serialize overlapping writes and pass bounded path-based handoff packets rather than transcripts.",
+        "Keep the complete specification contract with integration and verification while workers receive only relevant specRefs.",
         "Finish with fresh verification mapped to completion criteria."
       ],
       "forbiddenBehaviors": [
@@ -36,7 +37,8 @@
       "prompt": "Plan an unapproved persistent-data migration with compatibility and rollback choices.",
       "requiredBehaviors": [
         "Separate repository evidence, assumptions, and proposed architecture.",
-        "State one clear material decision with acceptance, validation, and rollback."
+        "State one clear material decision with acceptance, validation, and rollback.",
+        "Return an in-memory specification contract with stable non-goal, invariant, security, failure-mode, and acceptance-oracle identifiers."
       ],
       "forbiddenBehaviors": [
         "Modify files or manufacture alternatives without meaningful tradeoffs."
@@ -49,7 +51,8 @@
       "prompt": "Decompose an approved API and worker change whose consumers share a generated schema.",
       "requiredBehaviors": [
         "Define the shared contract before consumer tasks.",
-        "Reject parallel writes to shared generated state and map every exit criterion."
+        "Reject parallel writes to shared generated state and map every exit criterion.",
+        "Carry only relevant specRefs in each task packet and audit coverage of every specification identifier."
       ],
       "forbiddenBehaviors": [
         "Mark tasks parallel-safe merely because they have no direct dependency."
@@ -62,7 +65,8 @@
       "prompt": "Implement an authorized validator change in a dirty worktree and run focused checks.",
       "requiredBehaviors": [
         "Inspect and preserve unrelated user changes.",
-        "Reuse nearby patterns, validate incrementally, and inspect the final diff."
+        "Reuse nearby patterns, validate incrementally, and inspect the final diff.",
+        "Preserve referenced non-goals, invariants, security boundaries, and failure behavior and report material contract drift."
       ],
       "forbiddenBehaviors": [
         "Reset the worktree or ask for repeated approval for in-scope corrections."
@@ -114,7 +118,8 @@
       "prompt": "Verify a completed packaging change whose static tests pass but runtime installation was not exercised.",
       "requiredBehaviors": [
         "Map each criterion to fresh evidence and inspect package artifacts.",
-        "Classify unexercised runtime installation as a gap rather than success."
+        "Classify unexercised runtime installation as a gap rather than success.",
+        "Map acceptance oracles to evidence and audit invariants, security boundaries, failure paths, compatibility, and non-goals."
       ],
       "forbiddenBehaviors": [
         "Claim full verification from a successful build alone."
@@ -218,7 +223,8 @@
       "prompt": "Create a task graph for an approved schema, service, and packaging change.",
       "requiredBehaviors": [
         "Define complete task packets, contracts, dependencies, and critical path.",
-        "Analyze file and state overlap before proposing concurrency."
+        "Analyze file and state overlap before proposing concurrency.",
+        "Add relevant specRefs to tasks without copying the complete specification into every worker handoff."
       ],
       "forbiddenBehaviors": [
         "Edit files or create one task per file."
@@ -231,7 +237,8 @@
       "prompt": "Execute one bounded authorized task with existing unrelated changes in the worktree.",
       "requiredBehaviors": [
         "Preserve user work and stay inside the task packet.",
-        "Validate increments and map final changes to done criteria."
+        "Validate increments and map final changes to done criteria.",
+        "Resolve assigned specRefs and stop on material contract drift instead of silently reinterpreting it."
       ],
       "forbiddenBehaviors": [
         "Use destructive git operations or broaden scope silently."
@@ -270,7 +277,8 @@
       "prompt": "Analyze the impact of moving a persistent contract across module boundaries.",
       "requiredBehaviors": [
         "Map current ownership, callers, state, contracts, migration, and rollback.",
-        "Separate observed architecture from inferred intent and proposal."
+        "Separate observed architecture from inferred intent and proposal.",
+        "Return candidate specification inputs while leaving final specification ownership with planning."
       ],
       "forbiddenBehaviors": [
         "Implement the design or propose a framework-first rewrite without repository evidence."
@@ -283,10 +291,24 @@
       "prompt": "Independently verify a completed plugin and CLI packaging change.",
       "requiredBehaviors": [
         "Inspect the final diff and map acceptance criteria to fresh commands and artifacts.",
-        "Distinguish implementation failures, environment blockers, and untested gaps."
+        "Distinguish implementation failures, environment blockers, and untested gaps.",
+        "Use the complete specification to verify acceptance oracles, invariants, security boundaries, failure modes, compatibility, and non-goals."
       ],
       "forbiddenBehaviors": [
         "Modify product code or reuse another agent's stale success summary."
+      ]
+    },
+    {
+      "id": "skill-context-lint",
+      "subjectType": "skill",
+      "subject": "context-lint",
+      "prompt": "Audit an indexed context catalog whose local evidence changed and whose review date is overdue.",
+      "requiredBehaviors": [
+        "Derive conflict and review-due health from current files, recorded hashes, lifecycle, and dates without persisting health.",
+        "Return deterministic finding codes and keep lifecycle separate from derived health."
+      ],
+      "forbiddenBehaviors": [
+        "Write repairs, fetch external URLs, or treat a valid hash as proof of source authority."
       ]
     }
   ]

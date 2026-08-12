@@ -24,6 +24,7 @@ Deliver one bounded task from an approved change using repository evidence, exis
 - Reference source and test files.
 - Dependencies or contracts produced by prerequisite tasks.
 - Exact validation expected for this task.
+- Relevant `specRefs`; preserve referenced non-goals, invariants, and security boundaries and implement referenced failure behavior.
 
 Return `NEEDS_CONTEXT` before editing when a missing input would force an architectural guess.
 
@@ -49,13 +50,14 @@ Return `NEEDS_CONTEXT` before editing when a missing input would force an archit
 ## Workflow
 
 1. Confirm the task packet and restate done criteria.
-2. Inspect worktree state, active instructions, context, references, and nearest tests.
-3. Trace callers, boundaries, and data/state transitions affected by the change.
-4. Implement one cohesive increment with minimal surface area.
-5. Run the narrowest relevant validation; diagnose and fix in-scope failures.
-6. Repeat until every done criterion is satisfied.
-7. Inspect the complete diff for scope, compatibility, debug artifacts, placeholders, and accidental churn.
-8. Run the task's final checks and return fresh evidence.
+2. Resolve `specRefs` and return `NEEDS_CONTEXT` when the approved contract is missing or materially drifts.
+3. Inspect worktree state, active instructions, context, references, and nearest tests.
+4. Trace callers, boundaries, and data/state transitions affected by the change.
+5. Implement one cohesive increment with minimal surface area.
+6. Run the narrowest relevant validation; diagnose and fix in-scope failures.
+7. Repeat until every done criterion is satisfied.
+8. Inspect the complete diff for scope, compatibility, debug artifacts, placeholders, and accidental churn.
+9. Run the task's final checks and return fresh evidence.
 
 ## Stop and escalation conditions
 

@@ -31,7 +31,7 @@ Return the smallest verified context packet that lets the next workflow make rep
 2. Read active instruction files in precedence order.
 3. Search source, tests, configuration, and dependency metadata with focused request terms.
 4. If `.codex-agent/context/index.json` exists, run `node scripts/select-context.mjs --root <repo> --query "<task>"` from this skill directory.
-5. Read every selected critical entry, then relevant high-priority entries. Read medium entries only to answer a concrete unresolved question.
+5. Read only returned entries whose exact-token reasons address the task. Priority breaks ties but never loads an unrelated entry, including `critical` entries.
 6. Inspect one or two representative implementations and their nearest tests.
 7. Record verified commands, versions, trust boundaries, and external contracts only when they affect the task.
 8. Stop when instructions, reference patterns, validation, and material unknowns are established.
@@ -39,6 +39,8 @@ Return the smallest verified context packet that lets the next workflow make rep
 ## Selection decisions
 
 - Default to at most five high-signal context or reference files.
+- Allow zero indexed results for an empty or irrelevant query; never manufacture relevance from priority alone.
+- Treat `conflicted` and `superseded` entries as ineligible and route catalog-health questions to `$context-lint`.
 - Include more only when separate subsystems impose distinct constraints.
 - Route version-sensitive external gaps to `$external-research`.
 - If the canonical index is missing or invalid, continue with instructions, source, tests, and manifests while reporting the state. A legacy-only catalog may be read for migration discovery but is not canonical.

@@ -72,6 +72,7 @@ export const validateWorkspace = (root = defaultRoot) => {
   const publishWorkflowPath = requireFile(".github/workflows/publish-cli.yml");
   const routingSuitePath = requireFile("evals/skill-routing.json");
   const behaviorSuitePath = requireFile("evals/behavior-contracts.json");
+  const modelEvalSchemaPath = requireFile("evals/model/result.schema.json");
   const generatedAgentsPath = requireFile("plugins/codex-agent/generated/agent-profiles.mjs");
   requireFile("scripts/derive-cli-version.mjs");
   requireFile("package-lock.json");
@@ -85,8 +86,10 @@ export const validateWorkspace = (root = defaultRoot) => {
   requireFile("plugins/codex-agent/scripts/context-candidate.mjs");
   requireFile("plugins/codex-agent/skills/context-curation/references/migration-policy.md");
   requireFile("plugins/codex-agent/skills/context-curation/scripts/navigation-migrate.mjs");
+  requireFile("plugins/codex-agent/skills/context-lint/scripts/context-lint.mjs");
+  requireFile("plugins/codex-agent/skills/plan-and-approve/references/spec-contract.md");
 
-  for (const schema of [contextIndexSchemaPath, contextProposalSchemaPath, contextCandidateSchemaPath, sessionManifestSchemaPath]) {
+  for (const schema of [contextIndexSchemaPath, contextProposalSchemaPath, contextCandidateSchemaPath, sessionManifestSchemaPath, modelEvalSchemaPath]) {
     if (fs.existsSync(schema)) parseJson(schema, errors);
   }
   const routingSuite = fs.existsSync(routingSuitePath) ? parseJson(routingSuitePath, errors) : null;

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import crypto from "node:crypto";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
@@ -149,6 +150,7 @@ test("initializeContext applies once and marks the repository initialized", () =
   const agents = fs.readFileSync(path.join(target, "AGENTS.md"), "utf8");
   const analysis = JSON.parse(fs.readFileSync(path.join(target, ".codex-agent", "analysis.json"), "utf8"));
   const config = fs.readFileSync(path.join(target, ".codex", "config.toml"), "utf8");
+  const contextIndex = JSON.parse(fs.readFileSync(path.join(target, ".codex-agent", "context", "index.json"), "utf8"));
 
   assert.equal(result.operation, "context.init");
   assert.equal(result.mode, "apply");
@@ -158,6 +160,8 @@ test("initializeContext applies once and marks the repository initialized", () =
   assert.match(agents, /codex-agent:managed:start repository-guidance/);
   assert.equal(analysis.packageManager.value, "pnpm");
   assert.equal(analysis.codexAgent.contextLifecycle.initialized, true);
+  assert.equal(contextIndex.version, 2);
+  assert.equal(contextIndex.entries.find((entry) => entry.id === "project-intelligence").evidence.some((item) => item.locator === "package.json"), true);
   assert.match(config, /max_concurrent_threads_per_session = 4/);
   assert.doesNotMatch(config, /\bmax_threads\b/);
   assert.equal(fs.existsSync(path.join(target, ".codex", "agents", "context_scout.toml")), true);
@@ -652,7 +656,12 @@ test("approved context is written with its index entry", () => {
   assert.equal(result.applied, true);
   assert.match(document, /codex-agent:context:start constraint-publish-events-after-transaction-commit/);
   assert.match(document, /Rollbacks must discard/);
-  assert.equal(index.entries.some((entry) => entry.id === result.id && entry.path === result.path), true);
+  assert.equal(index.version, 2);
+  const entry = index.entries.find((item) => item.id === result.id && item.path === result.path);
+  assert.ok(entry);
+  assert.equal(entry.kind, "constraint");
+  assert.equal(entry.evidence[0].type, "repository");
+  assert.equal(entry.evidence[0].sha256, crypto.createHash("sha256").update(fs.readFileSync(path.join(target, "package.json"))).digest("hex"));
 });
 
 test("context updates preserve manual Markdown and create backups", () => {
@@ -691,9 +700,27 @@ test("context metadata changes also require update approval and back up the inde
   assert.ok(index.entries.find((entry) => entry.id === initial.id).tags.includes("outbox"));
 });
 
-test("context curation rejects duplicate summaries, unsafe evidence, and secrets", () => {
+test("context supersession updates both lifecycle directions atomically", () => {
   const target = createNodeFixture();
-  saveContextProposal({ root: target, proposal: contextProposal(), apply: true });
+  const initial = saveContextProposal({ root: target, proposal: contextProposal(), apply: true });
+  const replacement = saveContextProposal({
+    root: target,
+    proposal: contextProposal({
+      title: "Publish events through the committed outbox",
+      contentMarkdown: "Publish committed domain events from the outbox and discard events produced by rolled back transactions.",
+      supersedes: [initial.id]
+    }),
+    apply: true
+  });
+  const index = JSON.parse(fs.readFileSync(path.join(target, ".codex-agent", "context", "index.json"), "utf8"));
+  assert.deepEqual(index.entries.find((entry) => entry.id === initial.id).supersededBy, [replacement.id]);
+  assert.equal(index.entries.find((entry) => entry.id === initial.id).status, "superseded");
+  assert.deepEqual(index.entries.find((entry) => entry.id === replacement.id).supersedes, [initial.id]);
+});
+
+test("context curation rejects duplicate summaries, unsafe or derived evidence, and secrets", () => {
+  const target = createNodeFixture();
+  const saved = saveContextProposal({ root: target, proposal: contextProposal(), apply: true });
   assert.throws(() => saveContextProposal({
     root: target,
     proposal: contextProposal({ title: "A second title", kind: "decision" })
@@ -706,6 +733,14 @@ test("context curation rejects duplicate summaries, unsafe evidence, and secrets
     root: target,
     proposal: contextProposal({ contentMarkdown: "Never persist this credential: sk-abcdefghijklmnopqrstuvwxyz1234567890 in project context." })
   }), /secret or credential/);
+  assert.throws(() => saveContextProposal({
+    root: target,
+    proposal: contextProposal({ evidence: [{ path: `.codex-agent/context/${saved.path}`, note: "Derived context must not cite itself." }] })
+  }), /primary repository evidence/);
+  assert.throws(() => saveContextProposal({
+    root: target,
+    proposal: contextProposal({ evidence: [{ type: "external", url: "https://example.com/reference", note: "External source only." }] })
+  }), /at least one repository or decision source/);
 });
 
 test("context curation refuses context directories reached through a symbolic link", () => {

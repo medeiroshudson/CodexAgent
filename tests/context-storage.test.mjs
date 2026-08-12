@@ -15,7 +15,7 @@ import {
   applyProjectTransaction,
   withContextLock
 } from "../plugins/codex-agent/scripts/lib/context-transaction.mjs";
-import { copyTreeSafely } from "../plugins/codex-agent/scripts/lib/safe-files.mjs";
+import { copyTreeSafely, sha256 } from "../plugins/codex-agent/scripts/lib/safe-files.mjs";
 import {
   buildContextIndex,
   saveContextProposal,
@@ -23,6 +23,7 @@ import {
 } from "../plugins/codex-agent/skills/context-curation/scripts/context-save.mjs";
 import { migrateNavigationContext } from "../plugins/codex-agent/skills/context-curation/scripts/navigation-migrate.mjs";
 import { selectContext } from "../plugins/codex-agent/skills/context-discovery/scripts/select-context.mjs";
+import { lintContext } from "../plugins/codex-agent/skills/context-lint/scripts/context-lint.mjs";
 
 const temporaryRoot = (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "codex-agent-context-storage-"));
@@ -148,6 +149,64 @@ test("context selection exposes resolver state and legacy fallback warnings", (t
   assert.equal(selected.source, "legacy");
   assert.equal(selected.entries[0].id, "rules");
   assert.equal(selected.warnings.some((warning) => warning.includes("read-only legacy")), true);
+});
+
+test("context selection uses exact Unicode tokens, explains ranking, and never exposes provenance", (t) => {
+  const root = temporaryRoot(t);
+  fs.writeFileSync(path.join(root, "source.md"), "# Source\n");
+  const contextRoot = path.join(root, ".codex-agent", "context");
+  fs.mkdirSync(path.join(contextRoot, "standards"), { recursive: true });
+  fs.writeFileSync(path.join(contextRoot, "standards", "api.md"), "# API\n\nContrato público estável.\n");
+  fs.writeFileSync(path.join(contextRoot, "standards", "critical.md"), "# Critical\n\nUnrelated critical rule.\n");
+  const metadata = (overrides) => ({
+    kind: "standard", scope: "repository", confidence: "high", status: "active",
+    recordedAt: "2026-08-01", lastVerifiedAt: "2026-08-01", ...overrides
+  });
+  const index = {
+    version: 2,
+    entries: [
+      metadata({
+        id: "api-contract", path: "standards/api.md", summary: "Public API contract and compatibility rules.",
+        tags: ["api", "compatibility"], aliases: ["contrato público"], priority: "high",
+        evidence: [{ type: "repository", locator: "source.md", note: "Primary repository source.", sha256: sha256(fs.readFileSync(path.join(root, "source.md"))) }]
+      }),
+      metadata({ id: "critical-rule", path: "standards/critical.md", summary: "A critical but unrelated repository rule.", tags: ["unrelated"], priority: "critical" })
+    ]
+  };
+  fs.writeFileSync(path.join(contextRoot, "index.json"), `${JSON.stringify(index, null, 2)}\n`);
+  const selected = selectContext({ root, query: "CONTRÁTO público" });
+  assert.deepEqual(selected.entries.map((entry) => entry.id), ["api-contract"]);
+  assert.equal(selected.entries[0].reasons.some((reason) => reason.field === "aliases"), true);
+  assert.equal(Object.hasOwn(selected.entries[0], "evidence"), false);
+  assert.equal(Object.hasOwn(selected.entries[0], "aliases"), false);
+  assert.deepEqual(selectContext({ root, query: "external" }).entries, []);
+  assert.deepEqual(selectContext({ root, query: "" }).entries, []);
+});
+
+test("context lint is read-only and derives stale provenance health", (t) => {
+  const root = temporaryRoot(t);
+  const evidencePath = path.join(root, "package.json");
+  fs.writeFileSync(evidencePath, "{}\n");
+  const contextRoot = path.join(root, ".codex-agent", "context");
+  fs.mkdirSync(contextRoot, { recursive: true });
+  fs.writeFileSync(path.join(contextRoot, "rules.md"), "# Rules\n\nStable repository rules.\n");
+  const index = {
+    version: 2,
+    entries: [{
+      id: "rules", path: "rules.md", summary: "Stable repository rules used by focused tasks.", tags: ["rules"], priority: "high",
+      kind: "standard", scope: "repository", confidence: "high", status: "active",
+      recordedAt: "2026-01-01", lastVerifiedAt: "2026-01-01", reviewAfter: "2026-02-01",
+      evidence: [{ type: "repository", locator: "package.json", note: "Repository manifest evidence.", sha256: "0".repeat(64) }]
+    }]
+  };
+  const indexPath = path.join(contextRoot, "index.json");
+  fs.writeFileSync(indexPath, `${JSON.stringify(index, null, 2)}\n`);
+  const before = fs.readFileSync(indexPath, "utf8");
+  const result = lintContext({ root, now: new Date("2026-08-11T12:00:00Z") });
+  assert.equal(result.ok, false);
+  assert.equal(result.entries[0].health, "conflict");
+  assert.deepEqual(result.findings.map((finding) => finding.code), ["evidence-digest-mismatch", "review-due"]);
+  assert.equal(fs.readFileSync(indexPath, "utf8"), before);
 });
 
 test("legacy migration previews, backs up, promotes atomically, and preserves .agents siblings", (t) => {
@@ -421,10 +480,10 @@ test("context transactions reject schema-invalid prospective indexes before stag
     root,
     documents: [{ path: "new.md", content: "# New\n\nSafe context document.\n" }],
     indexContent: JSON.stringify({
-      version: 2,
+      version: 3,
       entries: [{ id: "new", path: "new.md", summary: "A valid summary with an invalid root version.", tags: ["new"], priority: "high" }]
     })
-  }), /version must be 1/);
+  }), /version must be 1 or 2/);
   assert.equal(fs.existsSync(path.join(contextRoot, "new.md")), false);
   assert.equal(fs.readFileSync(path.join(contextRoot, "index.json"), "utf8"), before);
 });

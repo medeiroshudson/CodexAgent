@@ -1,0 +1,4 @@
+interface:
+  display_name: "Context Lint"
+  short_description: "Audit indexed context health without writes"
+  default_prompt: "Use $context-lint to audit canonical indexed context for stale provenance, review dates, conflicts, duplicates, orphans, and insufficient evidence without writing or using the network."
