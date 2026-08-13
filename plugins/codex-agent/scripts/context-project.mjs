@@ -11,6 +11,7 @@ import {
 } from "./lib/context-catalog.mjs";
 import { applyProjectTransaction, withContextLock } from "./lib/context-transaction.mjs";
 import { contextDate, upgradeContextIndex, upgradeContextIndexEntry } from "./lib/context-index.mjs";
+import { ANALYSIS_VERSION, analyzeRepository, detectorRegistry } from "./lib/project-analysis.mjs";
 import {
   assertInside,
   assertNoSymlink,
@@ -21,22 +22,17 @@ import {
   sha256
 } from "./lib/safe-files.mjs";
 
-export { agentProfiles };
+export { agentProfiles, detectorRegistry };
 
-const ANALYSIS_VERSION = 1;
 const CONTEXT_LIFECYCLE_VERSION = 1;
 const HASH_PATTERN = /^[a-f0-9]{64}$/;
 const LIFECYCLE_PHASES = new Set(["prepared", "migration-applied", "managed-running", "managed-applied"]);
-const IGNORED_DIRECTORIES = new Set([
-  ".git", ".codex-agent", ".next", ".nuxt", ".turbo", ".venv", "build", "coverage",
-  "dist", "node_modules", "target", "vendor"
-]);
 const MANAGED_CONTEXT = [
-  ["architecture", "architecture/system.md", "System architecture, modules, entrypoints, and detected boundaries.", ["architecture", "modules", "entrypoints"], "high", ["modules", "entrypoints", "conventions.boundaries"]],
+  ["architecture", "architecture/system.md", "System architecture, project units, entrypoints, and detected boundaries.", ["architecture", "units", "entrypoints"], "high", ["units", "entrypoints", "conventions.boundaries"]],
   ["code-quality", "standards/code-quality.md", "Detected source layout, naming, and engineering conventions.", ["code", "quality", "conventions"], "critical", ["conventions", "languages"]],
   ["testing", "standards/testing.md", "Detected test tooling, locations, and repository commands.", ["test", "verification", "commands"], "high", ["testing", "commands"]],
   ["security", "standards/security.md", "Detected security-sensitive boundaries and baseline safeguards.", ["security", "auth", "secrets"], "critical", ["security"]],
-  ["project-intelligence", "project-intelligence/project.md", "Detected stack, package tooling, CI, and project intelligence.", ["project", "stack", "ci"], "medium", ["project", "packageManager", "languages", "frameworks", "ciCd"]]
+  ["project-intelligence", "project-intelligence/project.md", "Detected stack, toolchains, CI, and project intelligence.", ["project", "stack", "ci"], "medium", ["project", "languages", "toolchains", "technologies", "ciCd", "scan"]]
 ];
 const CODEX_AGENT_IGNORE_RULES = [
   ".codex-agent/analysis.json",
@@ -55,214 +51,28 @@ const BROAD_CODEX_AGENT_IGNORE_RULES = new Set([
   "/.codex-agent/**"
 ]);
 const MANAGED_CODEX_AGENT_IGNORE_RULES = new Set(CODEX_AGENT_IGNORE_RULES);
+const EXCLUDABLE_MANAGED_FILES = new Set([".codex/config.toml", ".gitignore"]);
 
 const slash = (value) => value.split(path.sep).join("/");
 const unique = (items) => [...new Set(items.filter(Boolean))];
 const relative = (root, file) => slash(path.relative(root, file));
-const signal = (value, evidence = [], confidence = "unknown", status = "unknown") => ({
-  value,
-  evidence: unique(evidence),
-  confidence,
-  status
-});
-const detected = (value, evidence, confidence = "high") => signal(value, evidence, confidence, "detected");
-const inferred = (value, evidence, confidence = "medium") => signal(value, evidence, confidence, "inferred");
-const unknown = (empty) => signal(empty, [], "unknown", "unknown");
+
+const normalizeManagedExclusions = (items = []) => {
+  if (!Array.isArray(items)) throw new Error("Managed exclusions must be an array");
+  const normalized = unique(items.map((item) => safeRelativePath(item, "Managed exclusion"))).sort();
+  const unsupported = normalized.filter((item) => !EXCLUDABLE_MANAGED_FILES.has(item));
+  if (unsupported.length) {
+    throw new Error(`Unsupported managed exclusion: ${unsupported.join(", ")}. Supported paths: ${[...EXCLUDABLE_MANAGED_FILES].sort().join(", ")}`);
+  }
+  return normalized;
+};
 
 const readJson = (file) => {
   try { return JSON.parse(fs.readFileSync(file, "utf8")); }
   catch { return null; }
 };
 
-const walk = (root, limit = 6000) => {
-  const files = [];
-  const visit = (directory) => {
-    if (files.length >= limit) return;
-    let entries = [];
-    try { entries = fs.readdirSync(directory, { withFileTypes: true }); } catch { return; }
-    for (const entry of entries) {
-      if (files.length >= limit) break;
-      if (entry.isDirectory() && IGNORED_DIRECTORIES.has(entry.name)) continue;
-      const absolute = path.join(directory, entry.name);
-      if (entry.isDirectory()) visit(absolute);
-      else if (entry.isFile()) files.push(absolute);
-    }
-  };
-  visit(root);
-  return files.sort();
-};
-
-const dependencyNames = (manifest) => new Set(Object.keys({
-  ...(manifest?.dependencies ?? {}),
-  ...(manifest?.devDependencies ?? {}),
-  ...(manifest?.peerDependencies ?? {})
-}));
-
-const packageCommand = (manager, script) => {
-  if (manager === "npm" && script === "test") return "npm test";
-  if (manager === "yarn") return `yarn ${script}`;
-  return `${manager || "npm"} run ${script}`;
-};
-
-const classifyNaming = (name) => {
-  if (/^[a-z][a-z0-9]*(?:-[a-z0-9]+)+$/.test(name)) return "kebab-case";
-  if (/^[a-z][A-Za-z0-9]*$/.test(name) && /[A-Z]/.test(name)) return "camelCase";
-  if (/^[A-Z][A-Za-z0-9]*$/.test(name)) return "PascalCase";
-  if (/^[a-z][a-z0-9]*(?:_[a-z0-9]+)+$/.test(name)) return "snake_case";
-  return null;
-};
-
-export const analyzeProject = ({ root }) => {
-  const requestedRoot = path.resolve(root);
-  if (!fs.existsSync(requestedRoot)) throw new Error(`Project root not found: ${requestedRoot}`);
-  const projectRoot = fs.realpathSync(requestedRoot);
-  const files = walk(projectRoot);
-  const paths = files.map((file) => relative(projectRoot, file));
-  const pathSet = new Set(paths);
-  const manifestPath = path.join(projectRoot, "package.json");
-  const manifest = fs.existsSync(manifestPath) ? readJson(manifestPath) : null;
-  const dependencies = dependencyNames(manifest);
-
-  const lockManagers = [
-    ["pnpm-lock.yaml", "pnpm"], ["yarn.lock", "yarn"], ["bun.lockb", "bun"],
-    ["bun.lock", "bun"], ["package-lock.json", "npm"]
-  ].filter(([file]) => pathSet.has(file));
-  const declaredManager = typeof manifest?.packageManager === "string"
-    ? manifest.packageManager.split("@")[0]
-    : null;
-  const manager = declaredManager || lockManagers[0]?.[1] || (manifest ? "npm" : null);
-  const managerEvidence = [
-    ...(declaredManager ? ["package.json#packageManager"] : []),
-    ...lockManagers.filter(([, name]) => !declaredManager || name === declaredManager).map(([file]) => file),
-    ...(!declaredManager && !lockManagers.length && manifest ? ["package.json"] : [])
-  ];
-
-  const extensionLanguages = new Map([
-    [".js", "JavaScript"], [".mjs", "JavaScript"], [".cjs", "JavaScript"], [".jsx", "JavaScript"],
-    [".ts", "TypeScript"], [".tsx", "TypeScript"], [".py", "Python"], [".go", "Go"],
-    [".rs", "Rust"], [".java", "Java"], [".kt", "Kotlin"], [".swift", "Swift"],
-    [".rb", "Ruby"], [".php", "PHP"], [".cs", "C#"], [".cpp", "C++"], [".c", "C"],
-    [".vue", "Vue"], [".svelte", "Svelte"]
-  ]);
-  const languageEvidence = new Map();
-  for (const file of paths) {
-    const language = extensionLanguages.get(path.extname(file).toLowerCase());
-    if (!language) continue;
-    const evidence = languageEvidence.get(language) ?? [];
-    if (evidence.length < 5) evidence.push(file);
-    languageEvidence.set(language, evidence);
-  }
-  const languages = [...languageEvidence.keys()].sort();
-
-  const frameworkPackages = new Map([
-    ["next", "Next.js"], ["react", "React"], ["vue", "Vue"], ["@angular/core", "Angular"],
-    ["svelte", "Svelte"], ["@sveltejs/kit", "SvelteKit"], ["express", "Express"],
-    ["fastify", "Fastify"], ["nestjs", "NestJS"], ["@nestjs/core", "NestJS"],
-    ["vitest", "Vitest"], ["jest", "Jest"], ["playwright", "Playwright"],
-    ["@playwright/test", "Playwright"], ["cypress", "Cypress"]
-  ]);
-  const frameworks = unique([...frameworkPackages].filter(([name]) => dependencies.has(name)).map(([, label]) => label));
-  const frameworkEvidence = [...frameworkPackages]
-    .filter(([name]) => dependencies.has(name))
-    .map(([name]) => `package.json#${name}`);
-
-  const scripts = manifest?.scripts ?? {};
-  const commandOrder = ["install", "setup", "dev", "start", "build", "lint", "typecheck", "check", "test", "test:unit", "test:e2e"];
-  const commands = [];
-  for (const name of commandOrder) {
-    if (typeof scripts[name] === "string") commands.push({ name, command: packageCommand(manager, name), source: `package.json#scripts.${name}` });
-  }
-  for (const name of Object.keys(scripts).sort()) {
-    if (!commands.some((item) => item.name === name) && /^(build|lint|typecheck|test|check)(:|$)/.test(name)) {
-      commands.push({ name, command: packageCommand(manager, name), source: `package.json#scripts.${name}` });
-    }
-  }
-
-  const entrypoints = [];
-  for (const [field, value] of [["main", manifest?.main], ["module", manifest?.module]]) {
-    if (typeof value === "string") entrypoints.push({ path: value, source: `package.json#${field}` });
-  }
-  if (typeof manifest?.bin === "string") entrypoints.push({ path: manifest.bin, source: "package.json#bin" });
-  else for (const value of Object.values(manifest?.bin ?? {})) if (typeof value === "string") entrypoints.push({ path: value, source: "package.json#bin" });
-  for (const candidate of ["src/index.ts", "src/index.js", "src/main.ts", "src/main.js", "app/page.tsx", "app/page.jsx", "main.go", "Cargo.toml"]) {
-    if (pathSet.has(candidate) && !entrypoints.some((item) => item.path === candidate)) entrypoints.push({ path: candidate, source: candidate });
-  }
-
-  const modules = [];
-  const moduleRoots = unique(paths
-    .filter((file) => extensionLanguages.has(path.extname(file).toLowerCase()))
-    .map((file) => file.split("/")[0])
-    .filter((name) => name && !name.startsWith(".")));
-  for (const name of moduleRoots.slice(0, 20)) {
-    const evidence = paths.filter((file) => file.startsWith(`${name}/`) && extensionLanguages.has(path.extname(file).toLowerCase())).slice(0, 3);
-    modules.push({ name, path: name, evidence });
-  }
-
-  const testFiles = paths.filter((file) => /(^|\/)(__tests__\/|tests?\/|[^/]+\.(?:test|spec)\.[^.]+$)/.test(file));
-  const testConfigs = paths.filter((file) => /(^|\/)(vitest|jest|playwright|cypress)[^/]*\.(?:js|mjs|cjs|ts|json)$/.test(file));
-  const ciFiles = paths.filter((file) => file.startsWith(".github/workflows/") || [".gitlab-ci.yml", "Jenkinsfile", "azure-pipelines.yml"].includes(file));
-  const deploymentFiles = paths.filter((file) => /(^|\/)(Dockerfile|docker-compose\.ya?ml|vercel\.json|netlify\.toml|fly\.toml)$/.test(file));
-
-  const sourceFiles = paths.filter((file) => extensionLanguages.has(path.extname(file).toLowerCase()));
-  const namingEvidence = new Map();
-  for (const file of sourceFiles) {
-    const style = classifyNaming(path.basename(file, path.extname(file)));
-    if (!style) continue;
-    const evidence = namingEvidence.get(style) ?? [];
-    evidence.push(file);
-    namingEvidence.set(style, evidence);
-  }
-  const naming = [...namingEvidence]
-    .filter(([, evidence]) => evidence.length >= 3)
-    .sort((left, right) => right[1].length - left[1].length)[0];
-  const sourceRoots = ["src", "app", "lib", "packages", "apps", "services"]
-    .filter((directory) => paths.some((file) => file.startsWith(`${directory}/`)));
-  const securityEvidence = paths.filter((file) =>
-    !/^(?:\.agents\/context|\.codex-agent\/context|docs|templates)\//.test(file)
-    && /(^|\/)(auth|security|permissions?|secrets?|\.env\.example)(\/|\.|$)/i.test(file)
-  ).slice(0, 20);
-  const boundaryDirectories = {
-    api: ["api", "routes", "controllers"],
-    ui: ["components", "views", "pages", "app"],
-    persistence: ["db", "database", "models", "repositories", "migrations"]
-  };
-  const boundaries = Object.fromEntries(Object.entries(boundaryDirectories).map(([kind, candidates]) => {
-    const found = candidates.filter((candidate) => paths.some((file) => file.split("/").includes(candidate)));
-    return [kind, found.length ? detected(found, found.map((item) => `directory:${item}`), "medium") : unknown([])];
-  }));
-
-  return {
-    $schema: "project-analysis.schema.json",
-    version: ANALYSIS_VERSION,
-    root: projectRoot,
-    project: manifest?.name
-      ? detected({ name: manifest.name, private: Boolean(manifest.private) }, ["package.json#name"])
-      : inferred({ name: path.basename(projectRoot) }, ["repository directory name"], "low"),
-    packageManager: manager
-      ? (declaredManager || lockManagers.length
-        ? detected(manager, managerEvidence, "high")
-        : inferred(manager, managerEvidence, "low"))
-      : unknown(null),
-    languages: languages.length ? detected(languages, [...languageEvidence.values()].flat(), "high") : unknown([]),
-    frameworks: frameworks.length ? detected(frameworks, frameworkEvidence, "high") : unknown([]),
-    commands: commands.length ? detected(commands, commands.map((item) => item.source), "high") : unknown([]),
-    modules: modules.length ? inferred(modules, modules.flatMap((item) => item.evidence), modules.length > 1 ? "medium" : "low") : unknown([]),
-    entrypoints: entrypoints.length ? detected(entrypoints, entrypoints.map((item) => item.source), "high") : unknown([]),
-    conventions: {
-      sourceLayout: sourceRoots.length ? detected(sourceRoots, sourceRoots.map((item) => `directory:${item}`), "high") : unknown([]),
-      fileNaming: naming ? inferred(naming[0], naming[1].slice(0, 8), "medium") : unknown(null),
-      boundaries
-    },
-    security: securityEvidence.length ? detected(securityEvidence, securityEvidence, "medium") : unknown([]),
-    testing: (testFiles.length || testConfigs.length)
-      ? detected({ files: testFiles.slice(0, 30), configs: testConfigs }, [...testFiles.slice(0, 10), ...testConfigs], "high")
-      : unknown({ files: [], configs: [] }),
-    ciCd: (ciFiles.length || deploymentFiles.length)
-      ? detected({ ci: ciFiles, deployment: deploymentFiles }, [...ciFiles, ...deploymentFiles], "high")
-      : unknown({ ci: [], deployment: [] }),
-    existingGuidance: pathSet.has("AGENTS.md") ? detected(true, ["AGENTS.md"], "high") : detected(false, ["AGENTS.md not found"], "high")
-  };
-};
+export const analyzeProject = analyzeRepository;
 
 const isSignal = (value) => value && typeof value === "object" && "value" in value && Array.isArray(value.evidence);
 
@@ -271,7 +81,7 @@ export const validateProjectAnalysis = (analysis) => {
   if (!analysis || typeof analysis !== "object" || Array.isArray(analysis)) return { ok: false, errors: ["analysis must be an object"] };
   if (analysis.version !== ANALYSIS_VERSION) errors.push(`version must be ${ANALYSIS_VERSION}`);
   if (typeof analysis.root !== "string" || !analysis.root) errors.push("root must be a non-empty string");
-  for (const field of ["project", "packageManager", "languages", "frameworks", "commands", "modules", "entrypoints", "security", "testing", "ciCd", "existingGuidance"]) {
+  for (const field of ["project", "languages", "toolchains", "technologies", "commands", "units", "entrypoints", "security", "testing", "ciCd", "scan", "existingGuidance"]) {
     if (!isSignal(analysis[field])) errors.push(`${field} must contain value, evidence, confidence, and status`);
   }
   if (!analysis.conventions || typeof analysis.conventions !== "object") errors.push("conventions must be an object");
@@ -396,6 +206,10 @@ const renderAgents = (analysis) => {
   if (present(analysis.commands)) {
     parts.push(section("Repository commands", bullets(analysis.commands.value.map((item) => `${mdCode(item.command)} — ${safeText(item.name)} (${safeText(item.source)})`))));
   }
+  const stack = [];
+  if (present(analysis.languages)) stack.push(`Languages: ${analysis.languages.value.join(", ")}.${evidenceSuffix(analysis.languages)}`);
+  if (present(analysis.technologies)) stack.push(`Technologies: ${analysis.technologies.value.map((item) => safeText(item.name)).join(", ")}.${evidenceSuffix(analysis.technologies)}`);
+  if (stack.length) parts.push(section("Detected stack", bullets(stack)));
   const conventions = [];
   if (present(analysis.conventions?.sourceLayout)) conventions.push(`Source roots: ${analysis.conventions.sourceLayout.value.map((item) => mdCode(`${item}/`)).join(", ")}.${evidenceSuffix(analysis.conventions.sourceLayout)}`);
   if (present(analysis.conventions?.fileNaming)) conventions.push(`Observed file naming: ${mdCode(analysis.conventions.fileNaming.value)}. Apply it only where nearby files confirm the pattern.${evidenceSuffix(analysis.conventions.fileNaming)}`);
@@ -414,7 +228,7 @@ const renderAgents = (analysis) => {
 
 const renderArchitecture = (analysis) => {
   const parts = [];
-  if (present(analysis.modules)) parts.push(section("Observed modules", bullets(analysis.modules.value.map((item) => `${mdCode(`${item.path}/`)} (${item.evidence.slice(0, 2).map(safeText).join(", ")})`))));
+  if (present(analysis.units)) parts.push(section("Project units", bullets(analysis.units.value.map((item) => `${mdCode(item.path === "." ? "." : `${item.path}/`)} — ${safeText(item.name)} (${safeText(item.kind)}; ${item.evidence.slice(0, 2).map(safeText).join(", ")})`))));
   if (present(analysis.entrypoints)) parts.push(section("Entrypoints", bullets(analysis.entrypoints.value.map((item) => `${mdCode(item.path)} from ${safeText(item.source)}`))));
   const boundaries = Object.entries(analysis.conventions?.boundaries ?? {}).filter(([, item]) => present(item));
   if (boundaries.length) parts.push(section("Observed boundaries", bullets(boundaries.map(([kind, item]) => `${kind}: ${item.value.map((value) => mdCode(`${value}/`)).join(", ")}${evidenceSuffix(item)}`))));
@@ -435,6 +249,7 @@ const renderTesting = (analysis) => {
     if (testCommands.length) parts.push(section("Commands", bullets(testCommands.map((item) => `${mdCode(item.command)} (${safeText(item.source)})`))));
   }
   if (present(analysis.testing)) {
+    if (analysis.testing.value.units?.length) parts.push(section("Test units", bullets(analysis.testing.value.units.map(mdCode))));
     if (analysis.testing.value.configs.length) parts.push(section("Configuration", bullets(analysis.testing.value.configs.map(mdCode))));
     if (analysis.testing.value.files.length) parts.push(section("Observed tests", bullets(analysis.testing.value.files.slice(0, 20).map(mdCode))));
   }
@@ -453,15 +268,16 @@ const renderSecurity = (analysis) => {
 
 const renderProject = (analysis) => {
   const stack = [];
-  if (present(analysis.packageManager)) stack.push(`Package manager: ${mdCode(analysis.packageManager.value)}.${evidenceSuffix(analysis.packageManager)}`);
   if (present(analysis.languages)) stack.push(`Languages: ${analysis.languages.value.join(", ")}.${evidenceSuffix(analysis.languages)}`);
-  if (present(analysis.frameworks)) stack.push(`Frameworks/tooling: ${analysis.frameworks.value.join(", ")}.${evidenceSuffix(analysis.frameworks)}`);
+  if (present(analysis.toolchains)) stack.push(`Toolchains: ${analysis.toolchains.value.map((item) => safeText(item.name)).join(", ")}.${evidenceSuffix(analysis.toolchains)}`);
+  if (present(analysis.technologies)) stack.push(`Technologies: ${analysis.technologies.value.map((item) => safeText(item.name)).join(", ")}.${evidenceSuffix(analysis.technologies)}`);
   const parts = [];
   if (stack.length) parts.push(section("Detected stack", bullets(stack)));
   if (present(analysis.ciCd)) {
     const items = [...analysis.ciCd.value.ci.map((item) => `CI: ${mdCode(item)}`), ...analysis.ciCd.value.deployment.map((item) => `Deployment: ${mdCode(item)}`)];
     parts.push(section("CI and deployment", bullets(items)));
   }
+  if (present(analysis.scan) && analysis.scan.value.truncated) parts.push(section("Discovery limits", `Repository scan reached its ${analysis.scan.value.limit}-file budget; review a refined analysis before applying context.`));
   return parts.join("\n\n") || "No stack or CI facts were detected with sufficient evidence.";
 };
 
@@ -509,7 +325,7 @@ const managedEvidence = (analysis, id, signalPaths) => {
   }).slice(0, 20);
 };
 
-export const renderProjectFiles = (analysis, existingIndex = null) => {
+export const renderProjectFiles = (analysis, existingIndex = null, { excludeManaged = [] } = {}) => {
   if (containsSensitiveContent(JSON.stringify({ analysis, existingIndex }))) {
     throw new Error("Project context rendering input appears to contain a secret or credential");
   }
@@ -549,6 +365,7 @@ export const renderProjectFiles = (analysis, existingIndex = null) => {
     ]
   };
   files.set(".codex-agent/context/index.json", { kind: "json", content: `${JSON.stringify(index, null, 2)}\n` });
+  for (const file of normalizeManagedExclusions(excludeManaged)) files.delete(file);
   for (const [file, descriptor] of files) {
     if (containsSensitiveContent(descriptor.content ?? descriptor.body ?? "")) {
       throw new Error(`Generated managed content for ${file} appears to contain a secret or credential`);
@@ -650,7 +467,7 @@ const migrationChanges = (migration) => (migration?.changes ?? []).map((change) 
 
 const uniqueStrings = (items) => [...new Set(items.filter((item) => typeof item === "string" && item))];
 
-const planManagedFiles = ({ projectRoot, analysis, existingIndex, force, contextBaselineRoot = null }) => {
+const planManagedFiles = ({ projectRoot, analysis, existingIndex, force, excludeManaged = [], contextBaselineRoot = null }) => {
   const ownershipConflicts = managedIndexOwnershipConflicts(existingIndex);
   if (ownershipConflicts.length) {
     return {
@@ -663,7 +480,7 @@ const planManagedFiles = ({ projectRoot, analysis, existingIndex, force, context
       writePlan: []
     };
   }
-  const rendered = renderProjectFiles(analysis, existingIndex);
+  const rendered = renderProjectFiles(analysis, existingIndex, { excludeManaged });
   for (const [file, descriptor] of rendered) {
     if (containsSensitiveContent(descriptor.content ?? descriptor.body ?? "")) {
       throw new Error(`Generated managed content for ${file} appears to contain a secret or credential`);
@@ -777,10 +594,11 @@ const managedPlanContract = (plan) => ({
 
 const managedPlanHash = (plan) => sha256(JSON.stringify(managedPlanContract(plan)));
 
-const lifecyclePlanHash = ({ operation, force, lifecycleCatalog, migrationPreview, analysis, analysisCurrent, analysisContent, plan, conflicts }) => sha256(JSON.stringify({
+const lifecyclePlanHash = ({ operation, force, excludedManaged, lifecycleCatalog, migrationPreview, analysis, analysisCurrent, analysisContent, plan, conflicts }) => sha256(JSON.stringify({
   version: CONTEXT_LIFECYCLE_VERSION,
   operation,
   force,
+  excludedManaged,
   catalog: {
     state: lifecycleCatalog.state,
     canonicalHash: lifecycleCatalog.canonical.hash,
@@ -1085,16 +903,74 @@ const recoverPendingLifecycleTransactions = (projectRoot) => pendingLifecycleDir
   return { transactionId: journal.normalized.transactionId, outcome: recoverLifecycleJournal({ projectRoot, journal }) };
 });
 
+const approvalPlanFor = ({ operation, projectRoot, analysis, excludedManaged, changes, conflicts, planHash, applied }) => {
+  const activeChanges = changes.filter((change) => change.status !== "unchanged").map(({ path: file, status, phase }) => ({
+    path: file,
+    action: status,
+    phase
+  }));
+  const unchanged = changes.filter((change) => change.status === "unchanged").map((change) => change.path);
+  const names = (signal) => Array.isArray(signal?.value)
+    ? signal.value.map((item) => typeof item === "string" ? item : item?.name).filter(Boolean)
+    : [];
+  const testUnits = Array.isArray(analysis.testing?.value?.units) ? analysis.testing.value.units : [];
+  const scan = analysis.scan?.value ?? {};
+  return {
+    title: operation === "context.init" ? "Initialize managed project context" : "Refresh managed project context",
+    outcome: operation === "context.init"
+      ? "Create the first evidence-backed managed guidance and canonical context catalog."
+      : "Reconcile managed guidance and canonical context with current repository evidence.",
+    status: conflicts.length ? "conflicts-require-resolution" : applied ? "applied" : "approval-required",
+    target: projectRoot,
+    analysis: {
+      project: analysis.project?.value?.name ?? path.basename(projectRoot),
+      languages: names(analysis.languages),
+      toolchains: names(analysis.toolchains),
+      technologies: names(analysis.technologies),
+      units: Array.isArray(analysis.units?.value) ? analysis.units.value.length : 0,
+      testUnits: testUnits.length,
+      scan: {
+        files: Number.isSafeInteger(scan.files) ? scan.files : null,
+        truncated: Boolean(scan.truncated),
+        excluded: Array.isArray(scan.excluded) ? scan.excluded.map((item) => item.path).filter(Boolean) : []
+      }
+    },
+    changes: activeChanges,
+    preserved: {
+      unchanged,
+      excludedManaged: [...excludedManaged],
+      manualContent: "Content outside Codex-managed markers remains unchanged."
+    },
+    conflicts: [...conflicts],
+    safeguards: [
+      "Updated managed files are backed up during apply.",
+      "Repository or catalog drift invalidates this plan before any write."
+    ],
+    residualRisks: [
+      ...(scan.truncated ? ["Repository discovery reached its scan limit, so the plan may omit facts beyond that boundary."] : []),
+      "Automated discovery can omit behavior that is not evidenced by repository files."
+    ],
+    approval: conflicts.length
+      ? "Resolve the listed conflicts and review a new plan before approval."
+      : applied
+        ? "The reviewed plan was applied successfully."
+        : "Approve this displayed plan or request changes. The integrity ID is retained by Codex and does not need to be copied.",
+    integrityId: planHash
+  };
+};
+
 const runContextLifecycleOperation = ({
   operation,
   root,
   apply = false,
   force = false,
+  excludeManaged = [],
   analysis: suppliedAnalysis = null,
   expectedPlanHash = null,
   lockHeld = false
 }) => {
   const projectRoot = fs.realpathSync(path.resolve(root));
+  const excludedManaged = normalizeManagedExclusions(excludeManaged);
   const isInit = operation === "context.init";
   const lifecycleCatalog = resolveContextCatalog({ root: projectRoot });
 
@@ -1139,6 +1015,7 @@ const runContextLifecycleOperation = ({
     analysis,
     existingIndex: catalogIndex(activeCatalog),
     force,
+    excludeManaged: excludedManaged,
     contextBaselineRoot: isInit && lifecycleCatalog.state === "legacy-only"
       ? path.join(projectRoot, ".agents", "context")
       : null
@@ -1148,6 +1025,7 @@ const runContextLifecycleOperation = ({
   const planHash = lifecyclePlanHash({
     operation,
     force,
+    excludedManaged,
     lifecycleCatalog,
     migrationPreview,
     analysis,
@@ -1205,7 +1083,8 @@ const runContextLifecycleOperation = ({
             projectRoot,
             analysis,
             existingIndex: catalogIndex(activeCatalog),
-            force
+            force,
+            excludeManaged: excludedManaged
           });
           if (migration.applied && managedPlanHash(canonicalPlan) !== reviewedManagedPlanHash) {
             throw new Error("Context managed-file plan changed after preview; review a fresh preview");
@@ -1263,6 +1142,7 @@ const runContextLifecycleOperation = ({
     phase: "analysis"
   };
   const applied = apply && conflicts.length === 0;
+  const changes = [...migrationPlan, ...managedChanges, analysisChange];
 
   return {
     schemaVersion: CONTEXT_LIFECYCLE_VERSION,
@@ -1271,12 +1151,23 @@ const runContextLifecycleOperation = ({
     mode: apply ? "apply" : "preview",
     analysisPath: relative(projectRoot, analysisPathFor(projectRoot)),
     analysis,
-    changes: [...migrationPlan, ...managedChanges, analysisChange],
+    excludedManaged,
+    changes,
     conflicts,
     backups,
     planHash,
     applied,
-    catalogMigration: migration
+    catalogMigration: migration,
+    approvalPlan: approvalPlanFor({
+      operation,
+      projectRoot,
+      analysis,
+      excludedManaged,
+      changes,
+      conflicts,
+      planHash,
+      applied
+    })
   };
 };
 

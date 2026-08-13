@@ -24,21 +24,23 @@ Initialization is optional. Bundled skills remain usable without generated proje
 2. Use `context init` only when canonical context has not been initialized. Route an existing canonical catalog to `$context-refresh`.
 3. Treat `.codex-agent/context` as canonical. Treat `.agents/context` only as read-only migration input and never create a second source of truth.
 4. Classify every fact as `detected`, `inferred`, or `unknown`; omit unsupported facts instead of rendering guesses or placeholders.
-5. Keep preview read-only. Only `--apply` together with the exact preview `planHash` authorizes the deterministic writer after the changes and conflicts have been reviewed.
+5. Keep preview read-only. Present the complete human-readable approval plan in the user response before requesting approval. The `planHash` is an integrity identifier for the displayed plan, never a substitute for explaining it and never something the user must copy or repeat.
 6. Never ingest sessions, handoffs, candidates, transcripts, prompts, or temporary task state during initialization.
 7. Preserve manual Markdown outside managed markers, custom indexed entries, unrelated configuration, and user-owned worktree changes.
 8. Never claim that context files load automatically. Agents select entries explicitly through `.codex-agent/context/index.json`.
 9. Do not hard-code a model or rewrite canonical agent role contracts.
+10. Analyze through ecosystem-neutral units, toolchains, technologies, and path ownership. Never reduce a polyglot repository to one package manager or assign a path role from its directory name when a solution or workspace declares otherwise.
+11. Surface scan exclusions, limits, and truncation. A truncated inventory lowers confidence and must never be presented as complete discovery.
 
 ## Workflow
 
 1. **Discover** — run `$context-discovery`; record active instructions, source patterns, tests, commands, security boundaries, and unknowns.
 2. **Resolve state** — apply [the first-context contract](references/first-context-contract.md). Stop on divergent roots, invalid catalogs, symlinks, or unsupported paths.
 3. **Analyze** — build evidence-backed signals satisfying [the analysis contract](references/analysis-contract.md). Ask only questions whose answers materially change durable guidance.
-4. **Preview** — from the target repository, run `npx --yes @codex-agent/cli@latest context init`. Review analysis, changes, preservation decisions, migration actions, unknowns, and conflicts.
+4. **Preview** — from the target repository, run `npx --yes @codex-agent/cli@latest context init`. When repository ownership requires `.codex/config.toml` or `.gitignore` to remain untouched, repeat `--exclude-managed <path>` for those supported optional surfaces. Review the structured `approvalPlan`, analysis, exclusions, changes, preservation decisions, migration actions, unknowns, and conflicts.
 5. **Refine** — when model-assisted analysis establishes additional facts, supply a validated analysis file and preview again. Never write during refinement.
-6. **Present** — show the complete managed-file plan from [managed surfaces](references/managed-surfaces.md), including backups and any legacy-root relocation.
-7. **Apply** — only after explicit approval, run the same operation with `--apply --plan-hash <reviewed-plan-hash>`. Drift invalidates the hash and requires a new preview. Use replacement authority only for the exact reviewed conflict.
+6. **Present** — answer with the plan's outcome, detected project/stack summary, every material file action, preserved content and exclusions, conflicts, safeguards, and integrity ID. Ask the user to approve the displayed plan or request changes. Never respond with only a hash, never ask the user to echo it, and never make CLI syntax the approval interface.
+7. **Apply** — after the user approves the displayed plan in natural language, internally reuse its exact integrity ID with the identical exclusions. Drift or changed exclusions invalidates the plan and requires presenting a new complete preview. Use replacement authority only for the exact reviewed conflict.
 8. **Verify** — confirm the canonical index resolves, managed and manual regions are intact, generated profiles match canonical prompts, and repository-specific checks pass.
 
 Read [the context-root migration contract](references/context-root-migration.md) whenever the legacy root exists.
@@ -58,6 +60,7 @@ Return:
 - `Status` — `PREVIEW_READY`, `APPLIED`, `ALREADY_INITIALIZED`, `MIGRATION_CONFLICT`, or `BLOCKED`.
 - `Analysis` — detected, inferred, and unknown facts with evidence.
 - `Changes` — create, migrate, preserve, conflict, and backup decisions.
-- `Authority` — preview `planHash` or the exact matched hash and approval used for apply.
+- `Plan` — a self-contained human-readable outcome, evidence summary, file actions, preserves, conflicts, safeguards, and residual risk.
+- `Authority` — whether the displayed plan awaits approval or was approved in natural language, plus its integrity ID for traceability.
 - `Validated` — exact checks and outcomes.
 - `Remaining` — unresolved conflicts, unknowns, and residual risk.

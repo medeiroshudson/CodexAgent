@@ -189,7 +189,18 @@ The skill performs read-only discovery, analyzes repository evidence, and presen
 npx --yes @codex-agent/cli@latest context init --json
 ```
 
-Review the analysis, confidence, unknowns, conflicts, file diff, and `planHash`. Apply exactly that reviewed plan with:
+If repository ownership requires `.codex/config.toml` or `.gitignore` to remain untouched, repeat the supported exclusions in both preview and apply:
+
+```bash
+npx --yes @codex-agent/cli@latest context init \
+  --exclude-managed .codex/config.toml \
+  --exclude-managed .gitignore \
+  --json
+```
+
+The preview is presented as a human-readable approval plan: outcome, detected stack, material file actions, preserved surfaces, conflicts, safeguards, and residual risk. Its integrity ID binds that displayed content to the eventual write, but the user approves the plan in natural language and does not need to copy or repeat the hash.
+
+For direct CLI automation, apply exactly that reviewed plan with:
 
 ```bash
 npx --yes @codex-agent/cli@latest context init \
@@ -198,7 +209,11 @@ npx --yes @codex-agent/cli@latest context init \
   --json
 ```
 
-The initializer can detect package tooling, languages, frameworks, modules, entry points, test setup, repository commands, CI/CD, security-sensitive boundaries, and repeated conventions. Each analyzed fact is classified as `detected`, `inferred`, or `unknown` and carries evidence and confidence. Unknown facts are omitted rather than rendered as invented placeholders.
+Repository analysis is ecosystem-neutral. It inventories files, resolves declared containers such as solutions and workspaces, runs independent detector records, assigns ownership and path roles, aggregates facts, and only then renders context. The contract reports plural `toolchains`, `technologies`, and project `units`; it never selects one global package manager or assumes one programming language.
+
+Declared ownership has precedence over ignore and transient-directory heuristics. A directory named `packages`, `build`, `target`, or anything else remains project code when a solution or workspace declares it. Conversely, ignored caches and vendored assets do not become architecture or tests merely because they contain recognizable source extensions. The scan result exposes its exclusions, limit, and `truncated` state so incomplete discovery cannot be silent.
+
+Detectors are registry entries behind the common contract. Adding support for another language or build system extends the registry rather than changing lifecycle, evidence validation, rendering, or preview/apply semantics. Each fact is classified as `detected`, `inferred`, or `unknown` and carries repository-relative evidence and confidence; unsupported facts are omitted instead of invented.
 
 The generated structure is:
 
@@ -230,7 +245,7 @@ stateDiagram-v2
     [*] --> Uninitialized
     Uninitialized --> InitPreview: context init
     InitPreview --> Uninitialized: reject or drift
-    InitPreview --> Canonical: apply exact planHash
+    InitPreview --> Canonical: approve displayed plan
 
     Canonical --> Selected: context discovery
     Selected --> Canonical: task completes
@@ -240,7 +255,7 @@ stateDiagram-v2
     LintReport --> RefreshPreview: managed context is stale
     LintReport --> CurationPreview: curated entry needs review
 
-    RefreshPreview --> Canonical: apply exact planHash
+    RefreshPreview --> Canonical: approve displayed plan
     CurationPreview --> Canonical: approved transactional save
 
     Canonical --> MigrationPreview: reviewed legacy import
@@ -281,8 +296,8 @@ These workflows are deliberately separate:
 
 | Operation | Purpose | Mutates files? | Typical result |
 |---|---|---:|---|
-| `context init` | Create the first managed repository guidance, canonical catalog, and agent profiles | Only after exact preview approval | Initialized canonical context |
-| `context refresh` | Reanalyze the repository and reconcile Codex-managed guidance and context | Only after exact preview approval | Managed files updated with backups and preserved manual content |
+| `context init` | Create the first managed repository guidance, canonical catalog, and agent profiles | Only after approval of the displayed human-readable plan | Initialized canonical context |
+| `context refresh` | Reanalyze the repository and reconcile Codex-managed guidance and context | Only after approval of the displayed human-readable plan | Managed files updated with backups and preserved manual content |
 | `context lint` | Audit current schema, provenance, review dates, lifecycle, duplicates, and orphan documents | Never | Deterministic health report |
 | `context save` / `$context-curation` | Add, update, or supersede selected durable knowledge | Only after proposal review and approval | Curated transactional entry |
 
@@ -479,7 +494,7 @@ Codex Agent treats repository files, external pages, handoffs, tool output, and 
 - Repository-relative paths are checked for containment and symbolic-link traversal.
 - Context writes use one global lock, stage complete changes, validate prospective state, promote documents before the index, and write the index last.
 - Preview/apply workflows re-evaluate under the lock and reject drift.
-- `planHash` binds the reviewed analysis, catalog, preconditions, and file plan for init and refresh.
+- The human-readable approval plan is the user-facing authority boundary. `planHash` binds its analysis, catalog, preconditions, exclusions, and file actions internally so drift cannot change what an approval means.
 - Existing content is preserved or backed up; unresolved conflicts block the whole transaction.
 - Interrupted transactions keep recovery metadata so a later writer can safely roll forward or restore prior state.
 - Destructive actions, external writes, dependency changes, permission changes, and publication still require matching user authority.

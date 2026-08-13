@@ -16,6 +16,8 @@ Context initialization may create these repository surfaces:
 
 The exact preview is authoritative; this list describes the supported categories, not permission to create every file.
 
+`.codex/config.toml` and `.gitignore` are optional managed surfaces. A repository may preserve either path byte-for-byte by repeating `--exclude-managed <path>` in preview and apply. Exclusions are limited to those two paths, appear in the result, and participate in the reviewed `planHash`.
+
 ## Ownership
 
 - Markdown and TOML use explicit managed markers. Replace only a matching managed region.

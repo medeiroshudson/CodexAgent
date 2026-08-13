@@ -3,6 +3,7 @@ import path from "node:path";
 import {
   analyzeProject,
   agentProfiles,
+  detectorRegistry,
   initializeContext,
   refreshContext,
   renderProjectFiles,
@@ -38,6 +39,7 @@ export {
   analyzeProject,
   agentProfiles,
   buildContextIndex,
+  detectorRegistry,
   discoverNavigationContext,
   initializeContext,
   lintContext,

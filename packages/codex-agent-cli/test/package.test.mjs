@@ -14,13 +14,17 @@ const run = (command, args, options = {}) => spawnSync(command, args, {
   ...options
 });
 
+const runNpm = (args, options = {}) => process.platform === "win32"
+  ? run(process.env.ComSpec ?? "cmd.exe", ["/d", "/s", "/c", "npm", ...args], options)
+  : run("npm", args, options);
+
 test("published tarball runs without the source workspace", () => {
   const target = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "codex-agent-package-")));
   const npmCache = path.join(target, "npm-cache");
-  const built = run("npm", ["run", "build", "--workspace", "@codex-agent/cli"]);
+  const built = runNpm(["run", "build", "--workspace", "@codex-agent/cli"]);
   assert.equal(built.status, 0, built.stderr || built.stdout);
 
-  const packed = run("npm", [
+  const packed = runNpm([
     "pack",
     "--workspace", "@codex-agent/cli",
     "--ignore-scripts",
@@ -55,6 +59,10 @@ test("published tarball runs without the source workspace", () => {
   assert.match(contextHelp.stdout, /codex-agent context init/);
   assert.match(contextHelp.stdout, /codex-agent context refresh/);
   assert.match(contextHelp.stdout, /codex-agent context lint/);
+  assert.match(contextHelp.stdout, /--exclude-managed PATH/);
+  assert.match(contextHelp.stdout, /\.codex\/config\.toml and \.gitignore/);
+  assert.match(contextHelp.stdout, /human-readable plan/);
+  assert.match(contextHelp.stdout, /internal integrity check/);
 
   const removedInit = run(process.execPath, [executable, "init"], { cwd: target });
   assert.equal(removedInit.status, 1);
@@ -72,6 +80,35 @@ test("published tarball runs without the source workspace", () => {
   assert.equal(unknownContext.status, 1);
   assert.match(unknownContext.stderr, /Unknown context command: unknown/);
 
+  const excludedFixture = path.join(target, "excluded-fixture");
+  const excludedConfig = path.join(excludedFixture, ".codex", "config.toml");
+  const excludedIgnore = path.join(excludedFixture, ".gitignore");
+  fs.mkdirSync(path.dirname(excludedConfig), { recursive: true });
+  fs.writeFileSync(path.join(excludedFixture, "package.json"), JSON.stringify({ name: "excluded-fixture" }));
+  fs.writeFileSync(excludedConfig, `api_key = "sk-${"b".repeat(32)}"\n`);
+  fs.writeFileSync(excludedIgnore, "user-owned-ignore/\n");
+  const excludedConfigBefore = fs.readFileSync(excludedConfig);
+  const excludedIgnoreBefore = fs.readFileSync(excludedIgnore);
+  const exclusions = [
+    "--exclude-managed", ".codex/config.toml",
+    "--exclude-managed", ".gitignore"
+  ];
+  const excludedPreviewRun = run(process.execPath, [
+    executable, "context", "init", ...exclusions, "--json"
+  ], { cwd: excludedFixture });
+  assert.equal(excludedPreviewRun.status, 0, excludedPreviewRun.stderr);
+  const excludedPreview = JSON.parse(excludedPreviewRun.stdout);
+  assert.deepEqual(excludedPreview.excludedManaged, [".codex/config.toml", ".gitignore"]);
+  assert.equal(excludedPreview.changes.some((change) => excludedPreview.excludedManaged.includes(change.path)), false);
+  const excludedApplyRun = run(process.execPath, [
+    executable, "context", "init", ...exclusions,
+    "--apply", "--plan-hash", excludedPreview.planHash, "--json"
+  ], { cwd: excludedFixture });
+  assert.equal(excludedApplyRun.status, 0, excludedApplyRun.stderr);
+  assert.equal(JSON.parse(excludedApplyRun.stdout).applied, true);
+  assert.deepEqual(fs.readFileSync(excludedConfig), excludedConfigBefore);
+  assert.deepEqual(fs.readFileSync(excludedIgnore), excludedIgnoreBefore);
+
   const fixture = path.join(target, "fixture");
   fs.mkdirSync(fixture);
   fs.writeFileSync(path.join(fixture, "package.json"), JSON.stringify({ name: "fixture" }));
@@ -83,6 +120,23 @@ test("published tarball runs without the source workspace", () => {
   assert.equal(result.mode, "preview");
   assert.equal(result.applied, false);
   assert.equal(fs.realpathSync(result.root), fs.realpathSync(fixture));
+  assert.equal(result.approvalPlan.status, "approval-required");
+  assert.equal(result.approvalPlan.integrityId, result.planHash);
+
+  const humanFixture = path.join(target, "human-fixture");
+  fs.mkdirSync(humanFixture);
+  fs.writeFileSync(path.join(humanFixture, "package.json"), JSON.stringify({ name: "human-fixture", dependencies: { react: "18.3.0" } }));
+  const humanPreview = run(process.execPath, [executable, "context", "init"], { cwd: humanFixture });
+  assert.equal(humanPreview.status, 0, humanPreview.stderr);
+  assert.match(humanPreview.stdout, /Context approval plan: Initialize managed project context/);
+  assert.match(humanPreview.stdout, /Repository evidence/);
+  assert.match(humanPreview.stdout, /Technologies: React/);
+  assert.match(humanPreview.stdout, /Planned changes/);
+  assert.match(humanPreview.stdout, /Preserved/);
+  assert.match(humanPreview.stdout, /Residual risks/);
+  assert.match(humanPreview.stdout, /Approval: Approve this displayed plan or request changes/);
+  assert.match(humanPreview.stdout, /Plan integrity: [0-9a-f]{64}/);
+  assert.doesNotMatch(humanPreview.stdout.trimStart(), /^\{/);
 
   const appliedInit = run(process.execPath, [
     executable, "context", "init", "--apply", "--plan-hash", result.planHash, "--json"

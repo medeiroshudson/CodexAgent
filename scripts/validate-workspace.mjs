@@ -9,6 +9,7 @@ import { loadAgentDefinitions, renderAgentProfilesModule, renderAgentToml } from
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const defaultRoot = path.resolve(scriptDirectory, "..");
+const normalizeLineEndings = (value) => value.replace(/\r\n?/g, "\n");
 
 const listFiles = (root) => {
   const files = [];
@@ -40,6 +41,7 @@ const parseJson = (file, errors) => {
 };
 
 const frontmatter = (content) => {
+  content = normalizeLineEndings(content);
   const match = content.match(/^---\n([\s\S]*?)\n---\n/);
   if (!match) return null;
   const entries = {};
@@ -99,7 +101,7 @@ export const validateWorkspace = (root = defaultRoot) => {
   try {
     canonicalAgents = loadAgentDefinitions(workspace);
     if (canonicalAgents.length !== agentProfiles.length) errors.push("generated agent profile count does not match canonical sources");
-    if (fs.existsSync(generatedAgentsPath) && fs.readFileSync(generatedAgentsPath, "utf8") !== renderAgentProfilesModule(canonicalAgents)) {
+    if (fs.existsSync(generatedAgentsPath) && normalizeLineEndings(fs.readFileSync(generatedAgentsPath, "utf8")) !== renderAgentProfilesModule(canonicalAgents)) {
       errors.push("generated agent profile module is out of sync; run npm run agents:sync");
     }
     for (const definition of canonicalAgents) {
@@ -108,7 +110,7 @@ export const validateWorkspace = (root = defaultRoot) => {
       }
       const template = path.join(workspace, "templates", "project", ".codex", "agents", definition.file);
       if (!fs.existsSync(template)) errors.push(`missing generated agent template: ${path.relative(workspace, template)}`);
-      else if (fs.readFileSync(template, "utf8") !== renderAgentToml(definition)) errors.push(`${path.relative(workspace, template)}: out of sync with canonical prompt`);
+      else if (normalizeLineEndings(fs.readFileSync(template, "utf8")) !== renderAgentToml(definition)) errors.push(`${path.relative(workspace, template)}: out of sync with canonical prompt`);
     }
   } catch (error) {
     errors.push(`canonical agent profiles: ${error.message}`);
@@ -150,7 +152,7 @@ export const validateWorkspace = (root = defaultRoot) => {
   }
 
   if (fs.existsSync(publishWorkflowPath)) {
-    const workflow = fs.readFileSync(publishWorkflowPath, "utf8");
+    const workflow = normalizeLineEndings(fs.readFileSync(publishWorkflowPath, "utf8"));
     for (const required of [
       'branches:\n      - main',
       'node-version: "24"',

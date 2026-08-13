@@ -94,10 +94,13 @@ export const runModelEvals = ({ root = moduleRoot, runner, variant = "candidate"
   if (!Number.isInteger(repetitions) || repetitions < 1 || repetitions > 20) throw new Error("repetitions must be an integer from 1 to 20");
   const loaded = loadModelCases(root);
   const results = [];
+  const nodeRunner = process.platform === "win32" && /\.(?:cjs|mjs|js)$/i.test(absoluteRunner);
+  const runnerCommand = nodeRunner ? process.execPath : absoluteRunner;
+  const runnerArgs = nodeRunner ? [absoluteRunner] : [];
   for (const request of loaded.cases) {
     for (let repetition = 1; repetition <= repetitions; repetition += 1) {
       const input = { ...request, pluginRoot: path.join(root, "plugins", "codex-agent"), variant, repetition };
-      const executed = spawnSync(absoluteRunner, [], {
+      const executed = spawnSync(runnerCommand, runnerArgs, {
         input: `${JSON.stringify(input)}\n`, encoding: "utf8", shell: false, timeout: timeoutMs, maxBuffer: 2 * 1024 * 1024,
         env: process.env
       });

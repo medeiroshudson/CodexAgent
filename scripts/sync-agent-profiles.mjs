@@ -8,6 +8,7 @@ const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const defaultRoot = path.resolve(scriptDirectory, "..");
 const allowedFields = new Set(["name", "description", "sandbox_mode"]);
 const allowedSandboxes = new Set(["read-only", "workspace-write"]);
+const normalizeLineEndings = (value) => value.replace(/\r\n?/g, "\n");
 
 const parseScalar = (value) => {
   const trimmed = value.trim();
@@ -20,7 +21,7 @@ const parseScalar = (value) => {
 };
 
 export const parseAgentDefinition = (file) => {
-  const content = fs.readFileSync(file, "utf8");
+  const content = normalizeLineEndings(fs.readFileSync(file, "utf8"));
   const match = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]+)$/);
   if (!match) throw new Error(`${file}: missing agent frontmatter`);
 
@@ -107,8 +108,9 @@ export const syncAgentProfiles = ({ root = defaultRoot, write = false } = {}) =>
 
   for (const [file, expected] of artifacts) {
     const actual = fs.existsSync(file) ? fs.readFileSync(file, "utf8") : null;
-    if (actual !== expected) mismatches.push(path.relative(root, file));
-    if (write && actual !== expected) {
+    const matches = actual !== null && normalizeLineEndings(actual) === expected;
+    if (!matches) mismatches.push(path.relative(root, file));
+    if (write && !matches) {
       fs.mkdirSync(path.dirname(file), { recursive: true });
       fs.writeFileSync(file, expected);
     }

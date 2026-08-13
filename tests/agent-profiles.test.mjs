@@ -13,16 +13,17 @@ import {
 } from "../scripts/sync-agent-profiles.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const normalizeLineEndings = (value) => value.replace(/\r\n?/g, "\n");
 
 test("canonical agent prompts match the bundled module and project templates", () => {
   const definitions = loadAgentDefinitions(root);
   const generated = fs.readFileSync(path.join(root, "plugins", "codex-agent", "generated", "agent-profiles.mjs"), "utf8");
 
   assert.deepEqual(agentProfiles, definitions);
-  assert.equal(generated, renderAgentProfilesModule(definitions));
+  assert.equal(normalizeLineEndings(generated), renderAgentProfilesModule(definitions));
   for (const definition of definitions) {
     const template = fs.readFileSync(path.join(root, "templates", "project", ".codex", "agents", definition.file), "utf8");
-    assert.equal(template, renderAgentToml(definition));
+    assert.equal(normalizeLineEndings(template), renderAgentToml(definition));
   }
   assert.deepEqual(syncAgentProfiles({ root }).mismatches, []);
 

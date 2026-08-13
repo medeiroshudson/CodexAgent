@@ -8,12 +8,14 @@ import test from "node:test";
 import {
   analyzeProject,
   buildContextIndex,
+  detectorRegistry,
   initializeContext,
   migrateContext,
   migrateNavigationContext,
   refreshContext,
   renderProjectFiles,
   saveContextProposal,
+  validateAnalysisEvidence,
   validateContextProposal,
   validateProjectAnalysis
 } from "../src/core.mjs";
@@ -97,16 +99,166 @@ const createNavigationContextFixture = () => {
   return { source, context };
 };
 
-test("analyzeProject detects package manager, commands, tests, and conventions with evidence", () => {
+test("analyzeProject detects toolchains, commands, tests, and conventions with evidence", () => {
   const target = createNodeFixture();
   const analysis = analyzeProject({ root: target });
 
-  assert.equal(analysis.packageManager.value, "pnpm");
-  assert.deepEqual(analysis.packageManager.evidence, ["package.json#packageManager", "pnpm-lock.yaml"]);
+  assert.equal(analysis.version, 2);
+  assert.equal(analysis.toolchains.value.some((item) => item.name === "pnpm"), true);
+  assert.equal(analysis.toolchains.evidence.includes("package.json#packageManager"), true);
+  assert.equal(analysis.toolchains.evidence.includes("pnpm-lock.yaml"), true);
   assert.ok(analysis.commands.value.some((item) => item.command === "pnpm run test"));
   assert.equal(analysis.testing.status, "detected");
   assert.equal(analysis.conventions.fileNaming.value, "kebab-case");
   assert.equal(validateProjectAnalysis(analysis).ok, true);
+});
+
+test("detector registry exposes ecosystem adapters behind the shared analysis contract", () => {
+  assert.deepEqual(detectorRegistry.map((detector) => detector.id), ["node", "dotnet", "python", "jvm", "go", "rust", "php", "ruby"]);
+  assert.equal(Object.isFrozen(detectorRegistry), true);
+  assert.equal(detectorRegistry.every((detector) => Object.isFrozen(detector)), true);
+});
+
+test("independent workspace containers compose Rust, Go, and JVM units", () => {
+  const target = tempDirectory();
+  fs.mkdirSync(path.join(target, "rust-worker", "src"), { recursive: true });
+  fs.mkdirSync(path.join(target, "go-worker"), { recursive: true });
+  fs.mkdirSync(path.join(target, "java-service"), { recursive: true });
+  fs.writeFileSync(path.join(target, "Cargo.toml"), "[workspace]\nmembers = [\"rust-worker\"]\n");
+  fs.writeFileSync(path.join(target, "rust-worker", "Cargo.toml"), "[package]\nname = \"rust-worker\"\nversion = \"0.1.0\"\n");
+  fs.writeFileSync(path.join(target, "rust-worker", "src", "main.rs"), "fn main() {}\n");
+  fs.writeFileSync(path.join(target, "go.work"), "go 1.24\nuse (\n  ./go-worker\n)\n");
+  fs.writeFileSync(path.join(target, "go-worker", "go.mod"), "module example.com/go-worker\n\ngo 1.24\n");
+  fs.writeFileSync(path.join(target, "go-worker", "main.go"), "package main\nfunc main() {}\n");
+  fs.writeFileSync(path.join(target, "settings.gradle.kts"), "rootProject.name = \"polyglot\"\ninclude(\":java-service\")\n");
+  fs.writeFileSync(path.join(target, "java-service", "build.gradle.kts"), "plugins { java }\n");
+  fs.writeFileSync(path.join(target, "java-service", "Main.java"), "class Main {}\n");
+
+  const analysis = analyzeProject({ root: target });
+  const unitPaths = analysis.units.value.map((unit) => unit.path);
+  const toolchains = new Set(analysis.toolchains.value.map((item) => item.name));
+
+  assert.deepEqual(unitPaths, [".", "go-worker", "java-service", "rust-worker"]);
+  assert.equal(toolchains.has("Cargo"), true);
+  assert.equal(toolchains.has("Go modules"), true);
+  assert.equal(toolchains.has("JVM build tooling"), true);
+  assert.equal(analysis.languages.value.includes("Rust"), true);
+  assert.equal(analysis.languages.value.includes("Go"), true);
+  assert.equal(analysis.languages.value.includes("Java"), true);
+});
+
+test("declared workspaces retain ownership regardless of conventional directory names or ignore rules", () => {
+  const target = tempDirectory();
+  fs.mkdirSync(path.join(target, "packages", "api", "src"), { recursive: true });
+  fs.mkdirSync(path.join(target, "build", "src"), { recursive: true });
+  fs.writeFileSync(path.join(target, "package.json"), JSON.stringify({
+    name: "poly-workspace",
+    private: true,
+    workspaces: ["packages/*", "build"]
+  }));
+  fs.writeFileSync(path.join(target, ".tfignore"), "\\packages\n\\build\n");
+  fs.writeFileSync(path.join(target, "packages", "api", "package.json"), JSON.stringify({ name: "@fixture/api" }));
+  fs.writeFileSync(path.join(target, "packages", "api", "src", "index.ts"), "export const api = true;\n");
+  fs.writeFileSync(path.join(target, "build", "package.json"), JSON.stringify({ name: "@fixture/build" }));
+  fs.writeFileSync(path.join(target, "build", "src", "index.js"), "export const build = true;\n");
+
+  const analysis = analyzeProject({ root: target });
+
+  assert.deepEqual(analysis.units.value.map((unit) => unit.path), [".", "build", "packages/api"]);
+  assert.equal(analysis.languages.value.includes("TypeScript"), true);
+  assert.equal(analysis.languages.value.includes("JavaScript"), true);
+  assert.equal(analysis.scan.value.excluded.some((item) => item.path === "packages" || item.path === "build"), false);
+});
+
+test("multi-ecosystem repositories report independent toolchains instead of selecting one package manager", () => {
+  const target = tempDirectory();
+  fs.mkdirSync(path.join(target, "web"), { recursive: true });
+  fs.mkdirSync(path.join(target, "worker"), { recursive: true });
+  fs.writeFileSync(path.join(target, "web", "package.json"), JSON.stringify({ name: "web", dependencies: { react: "18.3.0" } }));
+  fs.writeFileSync(path.join(target, "web", "package-lock.json"), "{}\n");
+  fs.writeFileSync(path.join(target, "web", "index.ts"), "export const web = true;\n");
+  fs.writeFileSync(path.join(target, "worker", "pyproject.toml"), [
+    "[project]",
+    "name = \"worker\"",
+    "dependencies = [\"fastapi>=0.100\"]"
+  ].join("\n"));
+  fs.writeFileSync(path.join(target, "worker", "main.py"), "from fastapi import FastAPI\n");
+
+  const analysis = analyzeProject({ root: target });
+  const toolchains = new Set(analysis.toolchains.value.map((item) => item.name));
+
+  assert.equal(toolchains.has("Node package tooling"), true);
+  assert.equal(toolchains.has("Python packaging"), true);
+  assert.equal(analysis.technologies.value.some((item) => item.name === "React"), true);
+  assert.equal(analysis.technologies.value.some((item) => item.name === "FastAPI"), true);
+});
+
+test("solution ownership excludes ignored caches and vendored tests while retaining declared test units", () => {
+  const target = tempDirectory();
+  fs.mkdirSync(path.join(target, "src", "App", "Scripts", "tinymce", "plugins", "example"), { recursive: true });
+  fs.mkdirSync(path.join(target, "src", "App", "Content", "bootstrap"), { recursive: true });
+  fs.mkdirSync(path.join(target, "tests", "App.Tests"), { recursive: true });
+  fs.mkdirSync(path.join(target, "tests", "App.Tests", "obj", "Debug"), { recursive: true });
+  fs.mkdirSync(path.join(target, "src", "Legacy"), { recursive: true });
+  fs.mkdirSync(path.join(target, "packages", "cache"), { recursive: true });
+  fs.mkdirSync(path.join(target, ".tmp"), { recursive: true });
+  fs.writeFileSync(path.join(target, "Fixture.sln"), [
+    "Microsoft Visual Studio Solution File, Format Version 12.00",
+    "Project(\"{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}\") = \"App\", \"src\\App\\App.csproj\", \"{00000000-0000-0000-0000-000000000001}\"",
+    "EndProject",
+    "Project(\"{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}\") = \"App.Tests\", \"tests\\App.Tests\\App.Tests.csproj\", \"{00000000-0000-0000-0000-000000000002}\"",
+    "EndProject"
+  ].join("\n"));
+  fs.writeFileSync(path.join(target, ".tfignore"), "\\packages\n\\.tmp\n");
+  fs.writeFileSync(path.join(target, "src", "App", "App.csproj"), "<Project><PropertyGroup><TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion></PropertyGroup></Project>\n");
+  fs.writeFileSync(path.join(target, "src", "App", "packages.config"), "<packages><package id=\"EntityFramework\" version=\"6.4.4\" /><package id=\"jQuery\" version=\"3.7.1\" /></packages>\n");
+  fs.writeFileSync(path.join(target, "src", "App", "Program.cs"), "public class Program {}\n");
+  fs.writeFileSync(path.join(target, "src", "App", "Content", "bootstrap", "bootstrap.min.css"), "/*! Bootstrap v3.4.1 */\n");
+  fs.writeFileSync(path.join(target, "src", "App", "Scripts", "tinymce", "plugins", "example", "plugin.test.js"), "// vendored test\n");
+  fs.writeFileSync(path.join(target, "tests", "App.Tests", "App.Tests.csproj"), "<Project><PropertyGroup><TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion></PropertyGroup></Project>\n");
+  fs.writeFileSync(path.join(target, "tests", "App.Tests", "OrderTests.cs"), "public class OrderTests {}\n");
+  fs.writeFileSync(path.join(target, "tests", "App.Tests", "obj", "Debug", "GeneratedTests.cs"), "// generated\n");
+  fs.writeFileSync(path.join(target, "src", "Legacy", "packages.config"), "<packages><package id=\"bootstrap\" version=\"5.3.0\" /></packages>\n");
+  fs.writeFileSync(path.join(target, "packages", "cache", "cached.cs"), "// cache\n");
+  fs.writeFileSync(path.join(target, ".tmp", "scratch.cs"), "// temporary\n");
+
+  const analysis = analyzeProject({ root: target });
+
+  assert.deepEqual(analysis.units.value.map((unit) => unit.path), ["src/App", "tests/App.Tests"]);
+  assert.deepEqual(analysis.testing.value.units, ["tests/App.Tests"]);
+  assert.equal(analysis.testing.value.files.some((file) => /tinymce/i.test(file)), false);
+  assert.equal(analysis.testing.value.files.some((file) => /\/obj\//i.test(file)), false);
+  assert.equal(analysis.technologies.value.some((item) => item.name === ".NET Framework 4.5.2"), true);
+  assert.equal(analysis.technologies.value.some((item) => item.name === "Entity Framework 6"), true);
+  assert.equal(analysis.technologies.value.some((item) => item.name === "Bootstrap 3"), true);
+  assert.equal(analysis.technologies.value.some((item) => item.name === "Bootstrap 5"), false);
+  assert.equal(analysis.scan.value.excluded.some((item) => item.path === "packages"), true);
+  assert.equal(analysis.scan.value.excluded.some((item) => item.path === ".tmp"), true);
+  assert.equal(validateAnalysisEvidence(analysis, target).ok, true);
+});
+
+test("scan truncation is explicit and malformed metadata does not invent technologies", () => {
+  const target = tempDirectory();
+  fs.mkdirSync(path.join(target, "service"), { recursive: true });
+  fs.writeFileSync(path.join(target, "service", "pyproject.toml"), [
+    "[project]",
+    "name = \"service\"",
+    "description = \"django is mentioned only as prose\"",
+    "[tool.unrelated]",
+    "django = \"5.0\""
+  ].join("\n"));
+  fs.writeFileSync(path.join(target, "service", "main.py"), "print('ok')\n");
+  fs.writeFileSync(path.join(target, "one.txt"), "1\n");
+  fs.writeFileSync(path.join(target, "two.txt"), "2\n");
+
+  const complete = analyzeProject({ root: target });
+  const truncated = analyzeProject({ root: target, scanLimit: 2 });
+
+  assert.equal(complete.technologies.status, "unknown");
+  assert.equal(truncated.scan.value.truncated, true);
+  assert.equal(truncated.scan.value.limit, 2);
+  assert.equal(truncated.scan.confidence, "medium");
+  assert.throws(() => analyzeProject({ root: target, scanLimit: 0 }), /positive integer/);
 });
 
 test("initializeContext previews canonical context without writing", () => {
@@ -119,6 +271,14 @@ test("initializeContext previews canonical context without writing", () => {
   assert.equal(result.applied, false);
   assert.equal(result.changes.some((item) => item.status === "create"), true);
   assert.equal(result.changes.some((item) => item.path === ".codex-agent/context/index.json"), true);
+  assert.equal(result.approvalPlan.status, "approval-required");
+  assert.equal(result.approvalPlan.outcome, "Create the first evidence-backed managed guidance and canonical context catalog.");
+  assert.equal(result.approvalPlan.changes.some((item) => item.path === ".codex-agent/context/index.json" && item.action === "create"), true);
+  assert.equal(result.approvalPlan.analysis.languages.includes("TypeScript"), true);
+  assert.equal(result.approvalPlan.integrityId, result.planHash);
+  assert.equal(result.approvalPlan.residualRisks.length >= 1, true);
+  assert.match(result.approvalPlan.approval, /Approve this displayed plan/);
+  assert.doesNotMatch(result.approvalPlan.approval, /provide|paste/i);
   assert.equal(fs.existsSync(path.join(target, "AGENTS.md")), false);
   assert.equal(fs.existsSync(path.join(target, ".codex-agent", "analysis.json")), false);
 });
@@ -155,10 +315,12 @@ test("initializeContext applies once and marks the repository initialized", () =
   assert.equal(result.operation, "context.init");
   assert.equal(result.mode, "apply");
   assert.equal(result.applied, true);
+  assert.equal(result.approvalPlan.status, "applied");
+  assert.equal(result.approvalPlan.integrityId, result.planHash);
   assert.match(agents, /pnpm run build/);
   assert.match(agents, /\.codex-agent\/context\/index\.json/);
   assert.match(agents, /codex-agent:managed:start repository-guidance/);
-  assert.equal(analysis.packageManager.value, "pnpm");
+  assert.equal(analysis.toolchains.value.some((item) => item.name === "pnpm"), true);
   assert.equal(analysis.codexAgent.contextLifecycle.initialized, true);
   assert.equal(contextIndex.version, 2);
   assert.equal(contextIndex.entries.find((entry) => entry.id === "project-intelligence").evidence.some((item) => item.locator === "package.json"), true);
@@ -215,6 +377,61 @@ test("context init replaces broad .codex-agent ignores with selective runtime ru
   assert.equal((refreshed.match(/codex-agent:managed:start runtime-state/g) ?? []).length, 1);
   assert.match(refreshed, /^node_modules\/$/m);
   assert.match(refreshed, /^dist\/$/m);
+});
+
+test("context lifecycle excludes reviewed optional managed surfaces without reading or changing them", () => {
+  const target = createNodeFixture();
+  const configPath = path.join(target, ".codex", "config.toml");
+  const ignorePath = path.join(target, ".gitignore");
+  fs.mkdirSync(path.dirname(configPath), { recursive: true });
+  fs.writeFileSync(configPath, `api_key = "sk-${"a".repeat(32)}"\n`);
+  fs.writeFileSync(ignorePath, "user-owned-ignore/\n");
+  const configBefore = fs.readFileSync(configPath);
+  const ignoreBefore = fs.readFileSync(ignorePath);
+  const excludeManaged = [".codex/config.toml", ".gitignore"];
+
+  const preview = initializeContext({ root: target, excludeManaged });
+  assert.deepEqual(preview.excludedManaged, [".codex/config.toml", ".gitignore"]);
+  assert.equal(preview.changes.some((change) => excludeManaged.includes(change.path)), false);
+
+  const applied = initializeContext({
+    root: target,
+    excludeManaged,
+    apply: true,
+    expectedPlanHash: preview.planHash
+  });
+  assert.equal(applied.applied, true);
+  assert.deepEqual(fs.readFileSync(configPath), configBefore);
+  assert.deepEqual(fs.readFileSync(ignorePath), ignoreBefore);
+  assert.equal(applied.backups.some((backup) => excludeManaged.some((file) => backup.endsWith(file))), false);
+
+  const refreshPreview = refreshContext({ root: target, excludeManaged });
+  const refreshed = refreshContext({
+    root: target,
+    excludeManaged,
+    apply: true,
+    expectedPlanHash: refreshPreview.planHash
+  });
+  assert.equal(refreshed.applied, true);
+  assert.deepEqual(fs.readFileSync(configPath), configBefore);
+  assert.deepEqual(fs.readFileSync(ignorePath), ignoreBefore);
+});
+
+test("managed exclusions are validated and included in the reviewed plan hash", () => {
+  const target = createNodeFixture();
+  const baseline = initializeContext({ root: target });
+  const excluded = initializeContext({ root: target, excludeManaged: [".gitignore"] });
+
+  assert.notEqual(excluded.planHash, baseline.planHash);
+  assert.throws(() => initializeContext({
+    root: target,
+    apply: true,
+    expectedPlanHash: excluded.planHash
+  }), /plan changed after preview/);
+  assert.throws(
+    () => initializeContext({ root: target, excludeManaged: [".codex-agent/context/index.json"] }),
+    /Unsupported managed exclusion/
+  );
 });
 
 test("context lifecycle preview rejects managed files reached through symbolic links without reading them", () => {
@@ -549,8 +766,8 @@ test("unknown facts are omitted instead of rendered as placeholders", () => {
   const analysis = analyzeProject({ root: target });
   const files = renderProjectFiles(analysis);
 
-  assert.equal(analysis.packageManager.status, "unknown");
-  assert.doesNotMatch(files.get("AGENTS.md").body, /Package manager/);
+  assert.equal(analysis.toolchains.status, "unknown");
+  assert.doesNotMatch(files.get("AGENTS.md").body, /Toolchains/);
   assert.doesNotMatch(files.get("AGENTS.md").body, /Replace this|TODO|Add languages/);
   assert.equal(files.has(".codex-agent/context/index.json"), true);
   assert.equal(files.has(".agents/context/index.json"), false);
@@ -559,7 +776,7 @@ test("unknown facts are omitted instead of rendered as placeholders", () => {
 test("invalid supplied analysis is rejected", () => {
   const target = createNodeFixture();
   const analysis = analyzeProject({ root: target });
-  analysis.packageManager.evidence = [];
+  analysis.toolchains.evidence = [];
   assert.throws(() => initializeContext({ root: target, analysis }), /requires evidence/);
 });
 
@@ -578,7 +795,7 @@ test("context lifecycle rejects credential-shaped project analysis before previe
 test("supplied analysis cannot use missing evidence or a different root", () => {
   const target = createNodeFixture();
   const analysis = analyzeProject({ root: target });
-  analysis.packageManager.evidence = ["missing-lock.yaml"];
+  analysis.toolchains.evidence = ["missing-lock.yaml"];
   assert.throws(() => initializeContext({ root: target, analysis }), /evidence does not match/);
 
   const other = analyzeProject({ root: target });
@@ -589,10 +806,10 @@ test("supplied analysis cannot use missing evidence or a different root", () => 
 test("supplied analysis cannot contradict deterministic repository facts", () => {
   const target = createNodeFixture();
   const analysis = analyzeProject({ root: target });
-  analysis.packageManager.value = "cargo";
-  analysis.packageManager.evidence = ["package.json"];
+  analysis.toolchains.value = [{ name: "Cargo", evidence: ["package.json"] }];
+  analysis.toolchains.evidence = ["package.json"];
 
-  assert.throws(() => initializeContext({ root: target, analysis }), /packageManager\.value contradicts deterministic repository analysis/);
+  assert.throws(() => initializeContext({ root: target, analysis }), /toolchains\.value contradicts deterministic repository analysis/);
   const addedCommand = analyzeProject({ root: target });
   addedCommand.commands.value.push({ name: "release", command: "cargo publish", source: "package.json" });
   addedCommand.commands.evidence.push("package.json");
@@ -605,18 +822,17 @@ test("supplied analysis cannot contradict deterministic repository facts", () =>
   ];
   for (const [field, mutate] of signalMutations) {
     const changed = analyzeProject({ root: target });
-    mutate(changed.packageManager);
+    mutate(changed.toolchains);
     assert.throws(
       () => initializeContext({ root: target, analysis: changed }),
-      new RegExp(`packageManager\\.${field} contradicts deterministic repository analysis`)
+      new RegExp(`toolchains\\.${field} contradicts deterministic repository analysis`)
     );
   }
 
   const supplemental = analyzeProject({ root: target });
-  supplemental.modules.value.push({ name: "tests", path: "tests", evidence: ["tests/user.test.ts"] });
-  supplemental.modules.evidence.push("tests/user.test.ts");
+  supplemental.security = { value: ["src/user-service.ts"], evidence: ["src/user-service.ts"], confidence: "medium", status: "detected" };
   const supplementalPreview = initializeContext({ root: target, analysis: supplemental });
-  assert.equal(supplementalPreview.analysis.modules.value.some((item) => item.name === "tests"), true);
+  assert.equal(supplementalPreview.analysis.security.value.includes("src/user-service.ts"), true);
   assert.equal(fs.existsSync(path.join(target, "AGENTS.md")), false);
 });
 
@@ -629,7 +845,7 @@ test("supplied analysis rejects evidence reached through internal or external sy
 
   for (const evidence of ["internal-package.json", "external-package.json"]) {
     const analysis = analyzeProject({ root: target });
-    analysis.packageManager.evidence = [evidence];
+    analysis.toolchains.evidence = [evidence];
     assert.throws(() => initializeContext({ root: target, analysis }), /symbolic link/);
   }
 });

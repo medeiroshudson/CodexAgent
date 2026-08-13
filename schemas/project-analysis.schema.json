@@ -4,25 +4,26 @@
   "title": "Codex Agent project analysis",
   "type": "object",
   "required": [
-    "version", "root", "project", "packageManager", "languages", "frameworks",
-    "commands", "modules", "entrypoints", "conventions", "security", "testing",
-    "ciCd", "existingGuidance"
+    "version", "root", "project", "languages", "toolchains", "technologies",
+    "commands", "units", "entrypoints", "conventions", "security", "testing",
+    "ciCd", "scan", "existingGuidance"
   ],
   "properties": {
-    "version": { "const": 1 },
+    "version": { "const": 2 },
     "generatedAt": { "type": "string", "format": "date-time" },
     "root": { "type": "string", "minLength": 1 },
     "project": { "$ref": "#/$defs/signal" },
-    "packageManager": { "$ref": "#/$defs/signal" },
     "languages": { "$ref": "#/$defs/signal" },
-    "frameworks": { "$ref": "#/$defs/signal" },
+    "toolchains": { "$ref": "#/$defs/signal" },
+    "technologies": { "$ref": "#/$defs/signal" },
     "commands": { "$ref": "#/$defs/signal" },
-    "modules": { "$ref": "#/$defs/signal" },
+    "units": { "$ref": "#/$defs/signal" },
     "entrypoints": { "$ref": "#/$defs/signal" },
     "conventions": { "$ref": "#/$defs/conventions" },
     "security": { "$ref": "#/$defs/signal" },
     "testing": { "$ref": "#/$defs/signal" },
     "ciCd": { "$ref": "#/$defs/signal" },
+    "scan": { "$ref": "#/$defs/signal" },
     "existingGuidance": { "$ref": "#/$defs/signal" }
   },
   "$defs": {

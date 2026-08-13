@@ -35,4 +35,6 @@ Preview and apply must use the same normalized proposal. Any worktree or catalog
 
 ## Report
 
-Return a machine-readable operation name, preview/apply mode, normalized `planHash`, changes, conflicts, preserves, backups, validation, and applied boolean. Apply must match the fresh preview hash; drift returns to preview. Human reporting should summarize material changes rather than dumping the full analysis.
+Return a machine-readable operation name, preview/apply mode, normalized `planHash`, structured `approvalPlan`, changes, conflicts, preserves, backups, validation, and applied boolean. Apply must match the fresh preview hash; drift returns to preview.
+
+Human reporting must show the approval plan itself: outcome, repository evidence summary, material file actions, preserved surfaces, conflicts, safeguards, and residual risk. The hash may appear as a plan integrity identifier after that explanation, but never replaces the plan and never needs to be copied or repeated by the user. Natural-language approval of the displayed plan authorizes the agent to reuse its retained integrity ID internally.

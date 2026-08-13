@@ -4,8 +4,11 @@ The context initializer records its intermediate analysis in `.codex-agent/analy
 
 ```json
 {
-  "value": "npm",
-  "evidence": ["package-lock.json", "package.json#scripts.test"],
+  "value": [
+    { "name": "MSBuild", "evidence": ["Application.csproj"] },
+    { "name": "Cargo", "evidence": ["worker/Cargo.toml"] }
+  ],
+  "evidence": ["Application.csproj", "worker/Cargo.toml"],
   "confidence": "high",
   "status": "detected"
 }
@@ -22,6 +25,23 @@ Allowed statuses are `detected`, `inferred`, and `unknown`. Allowed confidence v
 - Session handoffs, candidates, transcripts, prompts, raw logs, and generated summaries are not initialization evidence.
 
 Model-assisted analysis may supplement deterministic discovery, but it must satisfy the same schema, root binding, evidence, and confidence checks. It cannot override a detected fact without exposing the conflict.
+
+## Ecosystem-neutral discovery
+
+Analysis version 2 separates inventory from interpretation:
+
+1. inventory repository paths with explicit limits;
+2. resolve declared containers and members, including solutions and workspaces;
+3. run independent detector registry entries;
+4. assign unit ownership and path roles;
+5. aggregate facts into common signals;
+6. render managed context from those signals.
+
+The shared fields are `project`, `languages`, `toolchains`, `technologies`, `commands`, `units`, `entrypoints`, `conventions`, `testing`, `security`, `ciCd`, and `scan`. They do not encode a preferred language or package ecosystem. A repository may expose multiple toolchains and multiple kinds of units simultaneously.
+
+Declared unit membership outranks ignore and transient-directory heuristics. Directory names are weak evidence only: a workspace may legitimately own `packages`, `build`, `vendor`, or any other path. Internal Codex and VCS metadata remain outside project analysis. `scan.value` records the file count, limit, exclusions, and whether traversal was truncated; truncation must be visible and lowers confidence.
+
+Detector-specific parsing must fail closed. Malformed or unsupported metadata produces unknown facts rather than guessed dependencies or technologies. Adding an ecosystem extends detector and parser records without changing the common schema, lifecycle, evidence validation, or renderer.
 
 ## Agent profiles
 
