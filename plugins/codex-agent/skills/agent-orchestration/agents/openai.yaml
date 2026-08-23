@@ -1,4 +1,4 @@
 interface:
   display_name: "Agent Orchestration"
-  short_description: "Coordinate complex repository changes end to end"
-  default_prompt: "Use $agent-orchestration to coordinate this multi-component repository change from explicit context discovery through fresh verification, keeping session state ephemeral unless I explicitly request resumability."
+  short_description: "Route Codex subagents by capability and integrate evidence"
+  default_prompt: "Use $agent-orchestration to coordinate the independent workstreams in this repository task with quality-first, capability-appropriate subagent models, explicit ownership, integrated verification, and ephemeral state unless I explicitly request resumability."

@@ -5,16 +5,25 @@
       "id": "skill-agent-orchestration",
       "subjectType": "skill",
       "subject": "agent-orchestration",
-      "prompt": "Coordinate an approved multi-component change with independent read work and overlapping implementation files.",
+      "prompt": "Coordinate an approved multi-component change with independent read work, overlapping implementation files, and runtime-advertised GPT-5.6 Luna, Terra, and Sol models.",
       "requiredBehaviors": [
         "Select repository context before implementation decisions.",
+        "Keep the root responsible for decomposition, user communication, approvals, integration, disagreement resolution, and the final claim.",
+        "Delegate only bounded independent outcomes, use the fewest useful agents, and keep subagents as leaves unless an independent coordination workstream is explicit.",
         "Keep state ephemeral unless resumability is explicitly requested in natural language, then use an orchestrator-only session writer.",
-        "Serialize overlapping writes and pass bounded path-based handoff packets rather than transcripts.",
+        "Prefer parallel read-only work, assign exclusive ownership for concurrent writes, and serialize overlapping files or mutable state.",
+        "Pass bounded assignment contracts rather than transcripts, including objective, scope, authority, ownership, dependencies, validation, and return format.",
+        "Classify assignments by clarity, ambiguity, coupling, consequence, verification cost, and expected rework before selecting a model.",
+        "Default advertised Luna leaves to xhigh and difficult or quality-critical leaves to max, Terra collaborative workstream owners to max, and Sol senior judgment to high or max.",
+        "Use Luna low or medium only as an explicit latency optimization for completely mechanical deterministic work with cheap verification.",
+        "Choose only runtime-advertised model and reasoning overrides when they materially improve the assignment, otherwise inherit the parent, while preserving sandbox and approval boundaries.",
+        "Disclose each spawn compactly with task, role, ownership, and leaf or coordinator status without inventing runtime model identity.",
         "Keep the complete specification contract with integration and verification while workers receive only relevant specRefs.",
-        "Finish with fresh verification mapped to completion criteria."
+        "Wait for all results required by the coordination plan, inspect their evidence, and return one integrated synthesis.",
+        "Finish with fresh verification mapped to completion criteria from the integrated state."
       ],
       "forbiddenBehaviors": [
-        "Request approval for the already approved plan, create sessions from complexity, expose session commands or flags, or let subagents write shared session files."
+        "Force fan-out, assign overlapping writes, use Luna as a coordinator, use medium as the ordinary Luna baseline, default every worker to Sol, invent model availability, make a model mandatory, silently substitute an unavailable model, dump raw subagent reports, request approval for the already approved plan, create sessions from complexity, expose session commands or flags, or let subagents write shared session files."
       ]
     },
     {

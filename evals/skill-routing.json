@@ -14,6 +14,26 @@
       "expectedSkill": "agent-orchestration"
     },
     {
+      "id": "orchestrate-parallel-pr-review",
+      "kind": "positive",
+      "prompt": "Review this PR with parallel subagents for security, correctness, test gaps, and maintainability; wait for every requested review and return one evidence-backed synthesis.",
+      "expectedSkill": "agent-orchestration",
+      "expectedSkills": ["agent-orchestration", "code-review"]
+    },
+    {
+      "id": "orchestrate-parallel-diagnosis",
+      "kind": "positive",
+      "prompt": "Delegate independent read-only workstreams to trace the failing code path, inspect the test evidence, and verify the external contract, then reconcile the findings before proposing a fix.",
+      "expectedSkill": "agent-orchestration",
+      "expectedSkills": ["agent-orchestration", "context-discovery", "external-research"]
+    },
+    {
+      "id": "orchestrate-model-optimized-workstreams",
+      "kind": "positive",
+      "prompt": "Coordinate a repeatable evidence scan, a substantial implementation workstream, and a high-risk architecture critique, selecting the most efficient available subagent model and reasoning effort for each.",
+      "expectedSkill": "agent-orchestration"
+    },
+    {
       "id": "plan-feature",
       "kind": "positive",
       "prompt": "Propose an approach before adding organization-level SSO, including impact, alternatives, rollout, rollback, and validation.",
