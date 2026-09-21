@@ -1,6 +1,6 @@
 ---
 name: implementation
-description: Implement an authorized repository change incrementally while preserving existing behavior, user edits, project conventions, and acceptance criteria. Use after direct implementation authority or plan approval; do not use for diagnosis-only, review-only, or unapproved architecture work.
+description: Implement an authorized repository change incrementally while preserving existing behavior, user edits, project conventions, and acceptance criteria. Use after direct implementation authority for bounded work or after plan approval; do not use for diagnosis-only, review-only, unapproved architecture, or a material change whose design is not approved.
 ---
 
 # Implementation
@@ -22,7 +22,7 @@ Deliver the authorized behavior with the smallest cohesive repository change and
 2. Read supplied context and the nearest implementation and tests before editing.
 3. Reuse established naming, architecture, error handling, configuration, and test patterns.
 4. Make one cohesive increment at a time and validate its narrow behavior immediately.
-5. Continue through ordinary in-scope fixes without repeated confirmation; stop only when authority or direction materially changes.
+5. Continue through ordinary in-scope fixes without repeated confirmation. Stop and request approval when the work matches [the materiality test](../plan-and-approve/references/approval-policy.md), when direction materially changes, or when a contract would need reinterpretation.
 6. Do not weaken tests, suppress failures, add retries, or broaden scope merely to obtain green output.
 7. Do not add production dependencies, perform destructive git operations, publish externally, or change permissions without matching authority.
 8. Inspect the final diff and run `$verification-before-completion` before reporting success.

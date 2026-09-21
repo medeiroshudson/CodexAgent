@@ -35,6 +35,7 @@ Design and implement the smallest deterministic test set that proves assigned be
 6. Cover the expected path and material boundary or failure modes, not a ritual number of cases.
 7. Never skip, weaken, retry, or over-broaden assertions to hide a failure.
 8. Keep fixtures minimal, readable, and free of secrets or production data.
+9. Apply `$humanizer`: report coverage and gaps in direct prose, keeping command names, outcomes, and gaps exact while removing staging, decoration, and closers.
 
 ## Test decisions
 
@@ -83,3 +84,4 @@ Return one status: `DONE`, `DONE_WITH_GAPS`, `PRODUCTION_CHANGE_REQUIRED`, or `E
 - Universal positive/negative or Arrange-Act-Assert rules that conflict with local conventions.
 - Real network calls in deterministic suites.
 - Assertions on private call order without a public contract.
+- Staging the report with run-ups, decoration, or unsupported confidence.

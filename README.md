@@ -6,7 +6,7 @@ The plugin is designed for a recurring problem in agentic development: a capable
 
 ## What the plugin provides
 
-- Fourteen focused skills for discovery, planning, implementation, testing, review, research, context lifecycle, and verification.
+- Fifteen focused skills for discovery, planning, implementation, testing, review, research, context lifecycle, verification, and direct user-facing writing.
 - Nine narrow project agent profiles with read-only or workspace-write sandboxes matched to their responsibilities.
 - An explicit, versioned context catalog under `.codex-agent/context/`, selected just in time instead of injected automatically.
 - Preview-first initialization, refresh, migration, and durable-context curation with validation, backups, locking, and transactional writes.
@@ -40,7 +40,8 @@ flowchart TB
 
     W --> E["Fresh verification evidence"]
     X --> E
-    E --> U
+    E --> H["$humanizer"]
+    H --> U
 ```
 
 ### Native Codex boundaries
@@ -99,9 +100,10 @@ flowchart TD
     A -->|"Read-only review"| CR["$code-review"]
     A -->|"Version-sensitive external fact"| ER["$external-research"]
     A -->|"Context health audit"| CL["$context-lint"]
+    A -->|"Prose that must not sound machine-written"| HZ["$humanizer"]
     A -->|"Repository change"| AUTH{"Is implementation authorized?"}
 
-    AUTH -->|"No or material design is open"| PA["$plan-and-approve"]
+    AUTH -->|"No, or the change is material"| PA["$plan-and-approve"]
     AUTH -->|"Yes"| SIZE{"Is coordination needed?"}
 
     PA --> SIZE
@@ -111,10 +113,11 @@ flowchart TD
     IM --> TG["$test-generation when needed"]
     AO --> TG
     TG --> VC["$verification-before-completion"]
-    CR --> DONE["Evidence-backed result"]
-    ER --> DONE
-    CL --> DONE
-    VC --> DONE
+    CR --> HZ
+    ER --> HZ
+    CL --> HZ
+    VC --> HZ
+    HZ --> DONE["Evidence-backed result"]
 ```
 
 ### Recommended entry points
@@ -122,13 +125,14 @@ flowchart TD
 | Goal | Recommended workflow | Writes by default? |
 |---|---|---:|
 | Understand an unfamiliar area | `$context-discovery` | No |
-| Plan an unapproved feature, refactor, or migration | `$plan-and-approve` | No |
+| Plan an unapproved feature, refactor, migration, or material surface change | `$plan-and-approve` | No |
 | Implement a small authorized change | `$implementation` | Yes, within the authorized scope |
 | Coordinate an approved multi-component change | `$agent-orchestration` | Yes, through bounded tasks |
 | Add focused regression or contract coverage | `$test-generation` | Test files only |
 | Review a diff, branch, or PR | `$code-review` | No |
 | Verify a current external API or platform contract | `$external-research` | No |
 | Prove the final integrated result | `$verification-before-completion` | Only check-generated artifacts |
+| Rewrite user-facing text so it reads like a person wrote it | `$humanizer` | No |
 | Initialize project context for the first time | `$context-init` | Preview first |
 | Reconcile initialized managed context | `$context-refresh` | Preview first |
 | Audit catalog health | `$context-lint` | Never |
@@ -157,7 +161,21 @@ $agent-orchestration → discovery → task graph → bounded agents
 → integration → focused review → fresh verification
 ```
 
-Planning is not repeated when the user has already approved a concrete plan. Ordinary in-scope corrections also do not require repeated approval.
+Every flow ends with one direct answer in the user's language: the outcome first, exact evidence, and no staged openers, decorative formatting, inflated significance, or closing offers. `$humanizer` owns that rule and applies it to any text the user will keep, such as commit messages, pull-request descriptions, and documentation.
+
+Planning is not repeated when the user has already approved a concrete plan, and ordinary in-scope corrections do not require repeated approval. A material change does: it needs a presented plan and explicit approval before the first write, even when the request arrives as an instruction.
+
+### Material change gate
+
+A change is material, and needs a presented plan plus explicit approval before the first write, when it:
+
+- adds, removes, or renames a distributed or architectural surface, such as a skill, agent prompt, hook, CLI command, schema, manifest field, template, generated artifact, or evaluation contract;
+- changes a rule that applies to more than one skill, agent, or consumer project;
+- changes what an initialized consumer project receives;
+- changes a public contract, a permission or trust boundary, or ownership of persistent state;
+- is difficult to reverse after it ships.
+
+Wording inside one skill or document, a fixture for already-defined behavior, a contract-preserving bug fix, and ordinary validation are not material. An explicit instruction authorizes bounded work and never substitutes for an approved design. The [approval policy](plugins/codex-agent/skills/plan-and-approve/references/approval-policy.md) holds the normative test, and `$verification-before-completion` reports the authority basis for every change.
 
 ## Specification contracts
 
@@ -415,6 +433,8 @@ Project initialization installs nine focused agent profiles. Read-heavy roles ar
 | `test_engineer` | Workspace-write | Focused deterministic tests and fixtures |
 | `build_verifier` | Workspace-write | Independent final checks and generated verification artifacts |
 
+Every agent returns direct prose: status first, then evidence, gaps, and risk, with no staged opener, decoration, or closing offer. The root agent rewrites those returns into one answer for the user instead of forwarding them.
+
 Project templates default to four concurrent threads and a maximum depth of one. Independent read work can run in parallel. Overlapping source files, tests, lockfiles, generated state, migrations, and mutable external resources must be serialized or isolated in separate worktrees.
 
 Models are intentionally not fixed. Project agents inherit the parent Codex model unless a consumer explicitly configures a project-level override.
@@ -423,7 +443,7 @@ Models are intentionally not fixed. Project agents inherit the parent Codex mode
 
 The plugin bundles `SessionStart`, `PostToolUse`, and `Stop` reminders. Codex asks users to review and trust non-managed plugin hooks before they run.
 
-Hooks reinforce lifecycle discipline, such as loading guidance, keeping verification visible, and avoiding unsupported completion claims. They never create or resume sessions, harvest candidates, promote context, repair lint findings, or authorize external actions. Inspect them with `/hooks` and treat the Codex sandbox, permission mode, and approval policy as the actual security boundaries.
+Hooks reinforce lifecycle discipline, such as loading guidance, keeping verification visible, applying the `$humanizer` rules to user-facing prose, and avoiding unsupported completion claims. They never create or resume sessions, harvest candidates, promote context, repair lint findings, or authorize external actions. Inspect them with `/hooks` and treat the Codex sandbox, permission mode, and approval policy as the actual security boundaries.
 
 ## Deterministic CLI
 
@@ -607,8 +627,11 @@ Use `npm run agents:sync` after changing canonical agent Markdown. Plugin-ingest
 - [CLI package](packages/codex-agent-cli/README.md)
 - [Evaluation protocol](evals/README.md)
 - [Specification contract](plugins/codex-agent/skills/plan-and-approve/references/spec-contract.md)
+- [Approval policy](plugins/codex-agent/skills/plan-and-approve/references/approval-policy.md)
 - [Context proposal contract](plugins/codex-agent/skills/context-curation/references/proposal-contract.md)
 - [Context health contract](plugins/codex-agent/skills/context-lint/references/health-contract.md)
+- [AI writing patterns](plugins/codex-agent/skills/humanizer/references/ai-writing-patterns.md)
+- [Answer shape](plugins/codex-agent/skills/humanizer/references/answer-shape.md)
 - [Discovery protocol](plugins/codex-agent/skills/context-discovery/references/discovery-protocol.md)
 - [Contributing and validation](CONTRIBUTING.md)
 - [CLI release process](docs/releasing-cli.md)
@@ -621,6 +644,7 @@ The implementation is original and targets Codex-native plugin, skill, agent, ho
 - AI Builder Club, [Karpathy's Agentic Engineering Playbook](https://www.aibuilderclub.com/blog/karpathy-agentic-engineering) — practical framing for planning, tool use, feedback loops, and agent-oriented software development.
 - OpenAI, [Evals for AI applications](https://learn.chatgpt.com/use-cases/ai-app-evals) — baseline-first evaluation, reviewable fixtures, executable targets, and regression-oriented iteration.
 - [OpenAgentsControl](https://github.com/darrenhinde/OpenAgentsControl) — context-aware workflows, specialized roles, planning gates, and validation stages translated into native Codex surfaces.
+- [humanizer](https://github.com/blader/humanizer) and Wikipedia's [Signs of AI writing](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing) — the catalog of AI writing tells behind the `$humanizer` skill, the direct-answer policy, and the prose rules in every agent prompt.
 
 ## License
 

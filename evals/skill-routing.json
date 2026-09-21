@@ -375,6 +375,50 @@
       "kind": "negative",
       "prompt": "Apply this approved durable context proposal transactionally and update the canonical index.",
       "excludedSkills": ["context-lint"]
+    },
+    {
+      "id": "humanize-user-answer",
+      "kind": "positive",
+      "prompt": "Revise this status update so it stops sounding machine-written, keeps every fact and citation, and reads like a person wrote it.",
+      "expectedSkill": "humanizer"
+    },
+    {
+      "id": "humanize-commit-and-pull-request-text",
+      "kind": "positive",
+      "prompt": "Rewrite the pull-request description and commit message in plain prose without staged openers, bold labels, or a closing flourish.",
+      "expectedSkill": "humanizer"
+    },
+    {
+      "id": "humanize-overlap-review-summary",
+      "kind": "overlap",
+      "prompt": "Review this diff and write the findings summary as direct prose with no inflated severity language, staging, or decorative formatting.",
+      "expectedSkill": "code-review",
+      "expectedSkills": ["code-review", "humanizer"]
+    },
+    {
+      "id": "humanize-overlap-orchestrated-report",
+      "kind": "overlap",
+      "prompt": "Coordinate this multi-component change and deliver one integrated answer in plain prose without staging or decorative formatting.",
+      "expectedSkill": "agent-orchestration",
+      "expectedSkills": ["agent-orchestration", "humanizer"]
+    },
+    {
+      "id": "negative-humanizer-technical-trace",
+      "kind": "negative",
+      "prompt": "Trace the failing job in the worker, then report the exact commands and outputs that reproduce the failure.",
+      "excludedSkills": ["humanizer"]
+    },
+    {
+      "id": "plan-material-plugin-surface",
+      "kind": "positive",
+      "prompt": "Add a new plugin skill and apply its policy across every agent prompt, hook reminder, and generated project template.",
+      "expectedSkill": "plan-and-approve"
+    },
+    {
+      "id": "negative-implementation-material-surface",
+      "kind": "negative",
+      "prompt": "Add a new plugin skill and apply its policy across every agent prompt, hook reminder, and generated project template.",
+      "excludedSkills": ["implementation"]
     }
   ]
 }

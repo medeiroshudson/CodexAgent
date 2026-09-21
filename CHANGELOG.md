@@ -16,6 +16,12 @@
 - Added a navigation-context migrator with root discovery, metadata conversion, filtering, preview, backups, and native index generation.
 - Added the `context-curation` skill and approval-gated `context save` workflow.
 - Added evidence validation, duplicate detection, secret screening, managed updates, backups, and coordinated context/index writes.
+- Made materiality a falsifiable gate: the approval policy now defines when a change to a distributed surface, a cross-cutting rule, or a public contract requires a presented plan and explicit approval before the first write, even when the request arrives as an instruction.
+- Carried the gate into always-on surfaces: repository and generated project guidance, the session-start and completion hooks, the orchestration rule, the implementation trigger, and new `Materiality` and `Authority` report fields.
+- Added routing and behavior fixtures for the material plugin-surface change, materiality classification, and authority reporting.
+- Added the `$humanizer` skill, which leads with the outcome, keeps every fact and evidence value, and removes staged openers, inflated significance, forced triads, dash pileups, decorative formatting, and chatbot residue.
+- Applied the direct-answer policy to every canonical agent prompt, the orchestration contract and final report, the repository and generated project guidance, and the session and completion hooks, and changed orchestration to return one written answer instead of forwarded agent reports.
+- Extended evaluation to 64 routing fixtures and 24 skill and agent behavior contracts.
 - Replaced generic template copying with evidence-backed repository analysis, preview, managed refresh, and conflict backups.
 
 ## 0.1.0 - 2026-07-18

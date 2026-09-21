@@ -9,7 +9,9 @@
 | `.codex-agent/sessions/` | Ignored resumable handoffs and temporary candidates after explicit opt-in |
 | `.agents/plugins/marketplace.json` | Repository marketplace declaration; it is not moved with context |
 | `plugins/codex-agent/skills/` | Reusable workflows with progressive disclosure |
-| `agent-orchestration` skill | Classification, opt-in session ownership, minimal handoffs, integration, and evidence |
+| `agent-orchestration` skill | Classification, opt-in session ownership, minimal handoffs, integration, evidence, and the single user-facing answer |
+| `humanizer` skill | Direct-answer shaping and the AI writing tells removed from answers, agent returns, and embedded text |
+| `plan-and-approve` skill | Materiality test, approval boundaries, and the in-memory specification contract |
 | `context-init` / `context-refresh` | First setup and reconciliation workflows with separate state gates |
 | `context-harvest` / `context-curation` | Temporary extraction and separately approved durable promotion |
 | `plugins/codex-agent/agents/` | Canonical narrow role instructions and native profile metadata |
@@ -29,15 +31,16 @@ The plugin does not distribute `commands/*.md`. Skills are the portable interact
 
 ## Execution flow
 
-1. Classify the request, authority, persistence intent, and completion criteria.
+1. Classify the request, materiality, authority, persistence intent, and completion criteria.
 2. Read active repository guidance and select task-specific indexed context.
 3. Analyze architecture only when boundaries or contracts materially change.
-4. Plan only when scope has not already been approved.
+4. Plan and get explicit approval when the change is material or its scope is not yet approved.
 5. Break complex work into dependency-aware packets and delegate minimal context.
 6. Implement incrementally with serialized overlapping writes.
 7. When explicitly resumable, update the Markdown handoff through the parent orchestrator only.
-8. Integrate, review engineering risk, verify the final workspace, and report fresh evidence.
-9. Optionally harvest durable candidates after the primary outcome; promotion remains a separate approval boundary.
+8. Integrate, review engineering risk, and verify the final workspace with fresh evidence.
+9. Deliver one direct answer in the user's language under the `$humanizer` rules, keeping every fact, status, severity, and gap exact.
+10. Optionally harvest durable candidates after the primary outcome; promotion remains a separate approval boundary.
 
 ## Context root contract
 

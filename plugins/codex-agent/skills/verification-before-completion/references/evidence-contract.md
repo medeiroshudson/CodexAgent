@@ -21,6 +21,7 @@ Also record the referenced `INV-*`, `SEC-*`, and `FAIL-*` contracts the evidence
 ## Completion report
 
 - `Changed`: concise delivered behavior.
+- `Authority`: the basis for the change (bounded explicit instruction or an approved plan). A material change without an approved plan is reported as a gap, not a success.
 - `Criteria`: criterion-to-evidence mapping.
 - `Validated`: exact commands or interactions and outcomes.
 - `Not validated`: material platforms, states, integrations, or flows not exercised.

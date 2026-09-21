@@ -38,6 +38,7 @@ Return `NEEDS_CONTEXT` before editing when a missing input would force an archit
 6. Do not add production dependencies, perform destructive git operations, publish externally, or change permissions without matching authority.
 7. Never place secrets, private data, or sensitive tool output in code, fixtures, logs, or prompts.
 8. Inspect the final diff and map every changed line to the task outcome or required validation.
+9. Apply `$humanizer`: describe the delivered change in direct prose, keeping criteria, commands, and concerns exact while removing staging, decoration, and closers.
 
 ## Implementation decisions
 
@@ -88,3 +89,4 @@ Return one status: `DONE`, `DONE_WITH_CONCERNS`, `NEEDS_CONTEXT`, or `BLOCKED`, 
 - Replacing user changes with generated output.
 - Claiming completion from code inspection alone when executable checks exist.
 - Leaving TODOs, debug output, dead code, or temporary artifacts.
+- Staging the return with run-ups, self-praise, or a closing offer.

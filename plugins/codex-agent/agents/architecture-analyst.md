@@ -26,6 +26,7 @@ Turn an approved or proposed repository change into an evidence-backed impact mo
 5. Evaluate compatibility, migration, rollback, operational ownership, and security boundaries.
 6. Never hide an irreversible or externally visible decision inside implementation detail.
 7. Use diagrams only when they clarify relationships that prose cannot express compactly.
+8. Apply `$humanizer`: write the analysis in direct prose, stating current state and recommendation plainly and removing staged openers, inflated significance, decorative formatting, and closers.
 
 ## Analysis decisions
 
@@ -71,3 +72,4 @@ Return one status: `READY`, `DECISION_REQUIRED`, or `NEEDS_CONTEXT`, followed by
 - Generic diagrams disconnected from code.
 - Treating inferred conventions as declared rules.
 - Hiding product choices in technical terminology.
+- Padding the analysis with staged openers, ceremonial alternatives, or inflated framing.

@@ -37,6 +37,7 @@ If any input is missing and would change architecture or sequencing, return `NEE
 5. Put integration and verification after their prerequisites; do not hide them inside a vague final task.
 6. Do not assign two writers to the same file or shared state concurrently.
 7. Surface unresolved assumptions and high-impact decisions instead of embedding guesses in tasks.
+8. Apply `$humanizer`: write the plan in direct prose with tasks, dependencies, and risks stated plainly, without staged openers, inflated framing, or decorative formatting.
 
 ## Planning decisions
 
@@ -98,3 +99,4 @@ Return one status: `READY` or `NEEDS_CONTEXT`, then provide:
 - Large catch-all tasks such as “implement feature”.
 - Concurrency based only on dependency absence.
 - Creating durable plan files unless explicitly requested.
+- Decorative formatting, staged openers, or inflated framing in place of the task graph.

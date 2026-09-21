@@ -44,6 +44,7 @@ See [docs/releasing-cli.md](docs/releasing-cli.md) for initial npm setup and the
 - Put detailed skill material one level below `references/`.
 - Do not add a custom installer for behavior already provided by the Codex marketplace.
 - Keep hooks optional, fast, cross-platform, and non-destructive.
+- Classify materiality before mutating: a distributed surface, a cross-cutting rule, or a public contract needs a presented plan and explicit approval first, even when the request arrives as an instruction. `$plan-and-approve` owns [the materiality test](plugins/codex-agent/skills/plan-and-approve/references/approval-policy.md).
 - Add routing fixtures for new skills and deterministic tests for new scripts.
 - Keep `.codex-agent/context/` versionable while sessions, backups, locks, transactions, and analysis remain ignored.
 - Do not add public session commands or flags; resumable state is an explicit opt-in owned by `$agent-orchestration`.

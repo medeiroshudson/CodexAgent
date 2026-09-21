@@ -68,6 +68,8 @@ Read-heavy exploration, research, triage, test analysis, and review are the pref
 - Redirect or stop work when ownership overlaps, assumptions diverge, constraints are ignored, or scope expands.
 - Treat subagent results as evidence. Inspect changed files, commands, logs, and authoritative live surfaces before relying on them.
 - Reconcile disagreements explicitly and explain which evidence controls. Return one integrated result instead of concatenating agent reports.
+- Write that result in the user's language as direct prose: outcome first, evidence exact, and no staged opener, inflated significance, decorative formatting, emoji, or closing offer. Apply `$humanizer` before sending.
+- Subagent returns are evidence for the root, not user-facing text: keep them compact, and never forward raw narration when the root can state the result once.
 
 ## Integration gate
 

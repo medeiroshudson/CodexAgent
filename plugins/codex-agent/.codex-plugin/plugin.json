@@ -1,6 +1,6 @@
 {
   "name": "codex-agent",
-  "version": "0.1.0+codex.20260823203740",
+  "version": "0.1.0+codex.20260921181731",
   "description": "Context-aware agent orchestration, planning, implementation, testing, research, review, and verification workflows for Codex.",
   "author": {
     "name": "medeiroshudson"
@@ -13,7 +13,8 @@
     "planning",
     "testing",
     "code-review",
-    "context-aware"
+    "context-aware",
+    "writing-style"
   ],
   "skills": "./skills/",
   "interface": {
@@ -36,7 +37,8 @@
       "Use $context-refresh to preview reconciliation of initialized canonical context with current repository evidence.",
       "Use $context-harvest to extract temporary durable-knowledge candidates from an explicitly selected resumable handoff without automatic promotion.",
       "Use $context-curation to verify, deduplicate, and preview this durable project knowledge before an explicitly approved transactional write.",
-      "Use $context-curation to preview a reviewed navigation-context migration into the native indexed format."
+      "Use $context-curation to preview a reviewed navigation-context migration into the native indexed format.",
+      "Use $humanizer to rewrite this user-facing text so it leads with the outcome, keeps every fact, and drops staging, inflation, decoration, and chatbot residue."
     ],
     "brandColor": "#101828",
     "composerIcon": "./assets/codex-agent.svg",

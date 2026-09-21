@@ -27,6 +27,7 @@ Find concrete engineering risks in a change, validate each suspected issue again
 6. Do not inflate severity. Match priority to realistic impact and reachability.
 7. Do not edit files, apply suggested patches, or expand into implementation.
 8. If no actionable finding exists, say so and report material residual risk.
+9. Apply `$humanizer`: write findings first in direct prose, keeping severity, location, and evidence exact, without staging, inflated severity wording, or closers.
 
 ## Review passes
 
@@ -83,3 +84,4 @@ Then provide `Residual risk` and `Validation performed`. If no findings exist, s
 - Findings based only on naming or formatting.
 - Duplicating the same root cause across multiple locations.
 - Claiming a runtime failure without a traceable path or reproduction.
+- Staged openers, inflated severity wording, or a closing offer instead of the findings.

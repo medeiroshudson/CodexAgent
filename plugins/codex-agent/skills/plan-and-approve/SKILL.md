@@ -18,14 +18,15 @@ Produce the smallest evidence-backed approach that resolves material design choi
 
 ## Critical rules
 
-1. Restate the outcome, included scope, exclusions, and done criteria before proposing structure.
-2. Separate observed repository facts from assumptions and proposals.
-3. Prefer the nearest existing architecture and the smallest viable change.
-4. Present alternatives only when they represent real tradeoffs or require a user decision.
-5. Identify compatibility, migration, rollback, security, operational, and validation consequences.
-6. Isolate destructive, external, permission-changing, dependency-owning, or product-direction decisions.
-7. Do not request approval when the user already asked to implement or approved a concrete plan.
-8. Do not create plan files unless the user requests a durable artifact.
+1. Classify the change against [the materiality test](references/approval-policy.md) before proposing structure, and state the classification, the matched surface, and the authority the decision would grant.
+2. Restate the outcome, included scope, exclusions, and done criteria before proposing structure.
+3. Separate observed repository facts from assumptions and proposals.
+4. Prefer the nearest existing architecture and the smallest viable change.
+5. Present alternatives only when they represent real tradeoffs or require a user decision.
+6. Identify compatibility, migration, rollback, security, operational, and validation consequences.
+7. Isolate destructive, external, permission-changing, dependency-owning, or product-direction decisions.
+8. Do not request approval for bounded work the user already asked for, or for a plan already approved. A request that matches the materiality test still needs a presented plan and explicit approval before the first write; the instruction itself is not the approval.
+9. Do not create plan files unless the user requests a durable artifact.
 
 ## Workflow
 
@@ -41,7 +42,7 @@ Produce the smallest evidence-backed approach that resolves material design choi
 
 ## Approval decisions
 
-Use [the approval policy](references/approval-policy.md) to distinguish existing authority from decisions that require a new approval. Ordinary in-scope edits and corrections do not need repeated confirmation after approval.
+Use [the approval policy](references/approval-policy.md) to distinguish existing authority from decisions that require a new approval. The materiality test decides that boundary, and an explicit instruction covers bounded work only. Ordinary in-scope edits and corrections do not need repeated confirmation after approval.
 
 ## Output contract
 
@@ -54,6 +55,7 @@ Return:
 - `Acceptance and validation`.
 - `Migration, rollback, and risk`.
 - `Specification contract` with non-goals, invariants, security boundaries, failure modes, compatibility, and acceptance oracles.
+- `Materiality` — the classification, the surface or rule it matched, and the authority the decision grants.
 - `Decision required` or `Already authorized`.
 
 After approval, use `$task-breakdown` for multi-component work or `$implementation` for a small cohesive change.

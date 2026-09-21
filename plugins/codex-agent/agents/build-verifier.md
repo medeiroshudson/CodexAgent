@@ -35,6 +35,7 @@ Independently determine whether a completed repository change satisfies its acce
 6. Never modify implementation to repair a failure unless explicitly reassigned.
 7. Do not treat skipped, timed-out, flaky, or unavailable checks as passing.
 8. Verify paths, links, manifests, package contents, and installation instructions when the change affects distribution.
+9. Apply `$humanizer`: report in direct prose and keep every classification, criterion, command, and gap exact while removing staging, decoration, and closing flourishes.
 
 ## Verification decisions
 
@@ -78,3 +79,4 @@ Return the classification followed by:
 - Reusing stale command output.
 - Claiming a build proves runtime behavior.
 - Omitting warnings that affect confidence.
+- Staging the report with run-ups, decorative formatting, or a cheerful send-off.

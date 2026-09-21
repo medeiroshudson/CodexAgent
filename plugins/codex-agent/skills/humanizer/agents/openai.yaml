@@ -1,0 +1,4 @@
+interface:
+  display_name: "Humanizer"
+  short_description: "Write direct prose without AI writing tells"
+  default_prompt: "Use $humanizer to revise this text so it leads with the point, keeps every fact and citation, and drops staged openers, inflated significance, decorative formatting, and chatbot residue."

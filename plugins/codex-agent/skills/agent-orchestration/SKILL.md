@@ -26,7 +26,7 @@ Coordinate one traceable delivery flow while the root agent owns requirements, u
 4. Prefer read-only subagents for exploration, research, triage, and review. Give write-capable workers exclusive file or component ownership; serialize overlapping files, generated state, migrations, locks, and mutable external state.
 5. Use the fewest agents that make independent progress. Account for the extra token and coordination cost, respect the current slot limit, and keep useful root work moving while agents run when possible.
 6. Optimize model and reasoning per assignment using the quality-first defaults in [the model-routing contract](references/model-routing.md). Choose by clarity, ambiguity, coupling, consequence, verification cost, and expected rework; use only runtime-advertised configurations and fall back to parent inheritance when an override is unavailable or not worthwhile.
-7. Treat an explicit implementation request or approved plan as authority for ordinary in-scope work; do not request the same approval again. Use `$plan-and-approve` only when material scope or architecture remains unapproved, and `$task-breakdown` only for genuinely coordinated work.
+7. Treat an explicit implementation request or approved plan as authority for bounded in-scope work; do not request the same approval again. Apply [the materiality test](../plan-and-approve/references/approval-policy.md) before the first write: a material change needs `$plan-and-approve` and explicit approval even when the request arrived as an instruction. Use `$task-breakdown` only for genuinely coordinated work.
 8. Keep sessions ephemeral by default. File count, duration, complexity, delegation, or model judgment never activates resumability. Activate it only when the user explicitly asks to preserve, resume, or share this execution's state.
 9. Do not expose session commands, slash commands, CLI flags, or automatic hooks. The orchestrator is the sole session writer; subagents return structured deltas and never edit `manifest.json`, `handoff.md`, or candidate files.
 10. Give every subagent one bounded assignment with objective, scope, ownership, authority, dependencies, required validation, and return format. Pass only the instructions, selected context, paths, prerequisite outputs, and `specRefs` needed for that assignment.
@@ -34,6 +34,7 @@ Coordinate one traceable delivery flow while the root agent owns requirements, u
 12. On resume, verify repository identity, branch, HEAD, worktree drift, manifest revision, handoff hash, and every referenced path before trusting session claims.
 13. Run `$verification-before-completion` against the integrated state before success. A subagent summary never substitutes for final inspection or fresh evidence.
 14. Preserve user changes, current contracts, explicit exclusions, canonical context-selection boundaries, and external-action approvals throughout the flow. Optional `$context-harvest` remains separate from primary completion and never implies durable promotion.
+15. Write the final user-facing answer yourself, in the user's language, applying `$humanizer`: lead with the outcome, keep every fact and evidence value, and drop staged openers, inflated significance, decorative formatting, emoji, and closing offers. Return one direct report rather than concatenated subagent prose.
 
 ## Routing decisions
 
@@ -46,6 +47,7 @@ Coordinate one traceable delivery flow while the root agent owns requirements, u
 - **Long-running bounded work:** delegate an already-defined test, monitor, or evidence-gathering operation when it would otherwise block root communication.
 - **Model optimization:** when available, default bounded leaves to Luna `xhigh`, difficult or quality-critical leaves to Luna `max`, collaborative workstreams to Terra `max`, and senior judgment to Sol `high` or `max`. Use lower Luna efforts only as explicit latency optimizations for mechanical work.
 - **External contract uncertainty:** use `$external-research` before implementation that depends on it.
+- **User-facing prose:** apply `$humanizer` to the final answer and to text the user will keep, such as commit messages, pull-request descriptions, review summaries, and documentation.
 - **Explicit resumability:** use [the session contract](references/session-contract.md) in addition to the applicable route; do not change the route merely because a session exists.
 
 ## Workflow
@@ -63,7 +65,7 @@ Coordinate one traceable delivery flow while the root agent owns requirements, u
 11. **Reconcile** — inspect each result, verify claimed artifacts, resolve conflicting evidence, and ask the sole session writer to apply a revision-checked delta when resumable.
 12. **Integrate** — inspect combined state, resolve in-scope failures, and confirm prerequisite contracts match consumers.
 13. **Review and verify** — apply focused review and run fresh proportional validation from the integrated state.
-14. **Report** — return one integrated answer, not parallel reports. Deliver completion evidence independently of session maintenance; if opted in, reconcile final status and next action.
+14. **Report** — return one integrated answer, written in the user's language as direct prose with `$humanizer` applied, not parallel reports. Deliver completion evidence independently of session maintenance; if opted in, reconcile final status and next action.
 15. **Offer harvest** — only when non-obvious durable knowledge is plausible and future rediscovery cost is material. Run `$context-harvest` only for an explicit selected handoff; never auto-promote or auto-clean.
 
 ## Handoff contract
@@ -79,9 +81,9 @@ Every delegated task receives:
 - dependencies, known risks, user-owned files, and unresolved constraints;
 - leaf status by default; authorize nested coordination only for an independently owned workstream when slots and scope justify it;
 - requested model and reasoning effort, or an explicit parent-inheritance fallback, without claiming unreported runtime identity;
-- expected return status, changed artifacts, decisions, evidence, blockers, residual risk, and candidate learnings.
+- expected return status, changed artifacts, decisions, evidence, blockers, residual risk, and candidate learnings, written as direct prose without staging, decoration, or filler.
 
-Read [the orchestration contract](references/orchestration-contract.md) before spawning subagents for delegation gates, assignment contracts, concurrency, runtime coordination, and integration checks. Read [the model-routing contract](references/model-routing.md) before selecting explicit model or reasoning overrides. Read [the session contract](references/session-contract.md) before creating, updating, resuming, or completing resumable state.
+Read [the orchestration contract](references/orchestration-contract.md) before spawning subagents for delegation gates, assignment contracts, concurrency, runtime coordination, integration checks, and the reporting rules. Read [the model-routing contract](references/model-routing.md) before selecting explicit model or reasoning overrides. Read [the session contract](references/session-contract.md) before creating, updating, resuming, or completing resumable state.
 
 ## Failure handling
 
@@ -103,4 +105,6 @@ Report:
 - `Not validated` material gaps.
 - `Session` — `ephemeral`, or ID/path/revision/status for explicit resumability without exposing sensitive content.
 - `Harvest` — not offered, declined, candidate-only, or routed to separate curation.
+- `Authority` — explicit instruction for bounded work, the approved plan reference, or material scope that was never approved, reported as a gap instead of a completion claim.
 - `Residual risk` and any decision still required.
+- `Prose` — direct and natural, with no staged opener, decorative formatting, inflated significance, or closing offer, and with every evidence value intact.

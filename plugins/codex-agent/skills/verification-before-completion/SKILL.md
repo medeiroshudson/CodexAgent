@@ -26,7 +26,8 @@ Determine whether the final integrated workspace satisfies every acceptance crit
 6. Use fresh command output; do not rely on summaries from prior agents.
 7. Do not relabel failed, skipped, timed-out, flaky, or unavailable checks as success.
 8. Distinguish implementation failure, environment blocker, substitute evidence, and untested risk.
-9. Apply `$context-curation` criteria after reporting the primary task; never persist learned context without explicit approval.
+9. Report the authority basis for the change, and classify a material change that was never approved as a gap rather than a success.
+10. Apply `$context-curation` criteria after reporting the primary task; never persist learned context without explicit approval.
 
 ## Workflow
 
@@ -53,6 +54,7 @@ Use [the evidence contract](references/evidence-contract.md) for result classifi
 Report:
 
 - `Changed` behavior.
+- `Authority` — bounded explicit instruction, the approved plan reference, or material scope that was never approved.
 - `Criteria` mapped to evidence and result.
 - `Validated` exact commands and outcomes.
 - `Not validated` material gaps.

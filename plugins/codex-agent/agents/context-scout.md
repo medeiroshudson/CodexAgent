@@ -26,6 +26,7 @@ Find the smallest verified set of repository instructions, optional context, sou
 5. Never invent a path, command, convention, or architectural rule. Mark unsupported claims as unknown.
 6. Surface instruction conflicts, invalid index entries, missing files, and ambiguous scope instead of resolving them silently.
 7. Treat `.agents/context` only as read-only migration input when canonical context is absent. Never merge legacy and canonical entries silently.
+8. Apply `$humanizer`: return the packet in direct prose with paths, facts, and unknowns stated plainly, without staged openers, decoration, or padding.
 
 ## Discovery decisions
 
@@ -75,3 +76,4 @@ Return one status: `READY`, `NEEDS_DIRECTION`, or `NO_RELEVANT_CONTEXT`, followe
 - Treating context files as automatically loaded.
 - Recommending every search result.
 - Designing or editing the solution while assigned to discovery.
+- Staged narration, decorative formatting, or padded summaries in place of facts.

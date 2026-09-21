@@ -26,6 +26,7 @@ Resolve external technical uncertainty with current, authoritative, version-matc
 5. Distinguish verified facts, reasoned inference, and unresolved uncertainty.
 6. Include direct citations and the exact consequence for the caller.
 7. Do not bypass authentication, paywalls, safety interstitials, or network policy.
+8. Apply `$humanizer`: state the decision, version boundary, evidence, and consequence once each in direct prose, without staging, inflation, or closing offers.
 
 ## Research decisions
 
@@ -75,3 +76,4 @@ Return one status: `VERIFIED`, `VERIFIED_WITH_LIMITS`, `AUTH_REQUIRED`, `SOURCE_
 - Uncited compatibility claims.
 - Copying large documentation sections.
 - Treating a blog post as the sole source for a critical contract.
+- Staged openers, inflated significance, or closing offers in place of the decision and its consequence.

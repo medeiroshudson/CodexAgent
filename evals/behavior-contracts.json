@@ -20,7 +20,8 @@
         "Disclose each spawn compactly with task, role, ownership, and leaf or coordinator status without inventing runtime model identity.",
         "Keep the complete specification contract with integration and verification while workers receive only relevant specRefs.",
         "Wait for all results required by the coordination plan, inspect their evidence, and return one integrated synthesis.",
-        "Finish with fresh verification mapped to completion criteria from the integrated state."
+        "Finish with fresh verification mapped to completion criteria from the integrated state.",
+        "Apply the materiality test before the first write and report the authority basis in the integrated answer."
       ],
       "forbiddenBehaviors": [
         "Force fan-out, assign overlapping writes, use Luna as a coordinator, use medium as the ordinary Luna baseline, default every worker to Sol, invent model availability, make a model mandatory, silently substitute an unavailable model, dump raw subagent reports, request approval for the already approved plan, create sessions from complexity, expose session commands or flags, or let subagents write shared session files."
@@ -47,10 +48,13 @@
       "requiredBehaviors": [
         "Separate repository evidence, assumptions, and proposed architecture.",
         "State one clear material decision with acceptance, validation, and rollback.",
-        "Return an in-memory specification contract with stable non-goal, invariant, security, failure-mode, and acceptance-oracle identifiers."
+        "Return an in-memory specification contract with stable non-goal, invariant, security, failure-mode, and acceptance-oracle identifiers.",
+        "Classify the change against the materiality test and state the classification, the matched surface, and the authority the decision grants before proposing structure.",
+        "Require a presented plan and explicit approval for a material change even when the user phrased the request as an instruction."
       ],
       "forbiddenBehaviors": [
-        "Modify files or manufacture alternatives without meaningful tradeoffs."
+        "Modify files or manufacture alternatives without meaningful tradeoffs.",
+        "Mutate a distributed surface before the plan is approved, or treat an explicit instruction as sufficient authority for a materially new scope."
       ]
     },
     {
@@ -75,7 +79,8 @@
       "requiredBehaviors": [
         "Inspect and preserve unrelated user changes.",
         "Reuse nearby patterns, validate incrementally, and inspect the final diff.",
-        "Preserve referenced non-goals, invariants, security boundaries, and failure behavior and report material contract drift."
+        "Preserve referenced non-goals, invariants, security boundaries, and failure behavior and report material contract drift.",
+        "Stop for approval when the work matches the materiality test or would reinterpret an approved contract."
       ],
       "forbiddenBehaviors": [
         "Reset the worktree or ask for repeated approval for in-scope corrections."
@@ -128,7 +133,8 @@
       "requiredBehaviors": [
         "Map each criterion to fresh evidence and inspect package artifacts.",
         "Classify unexercised runtime installation as a gap rather than success.",
-        "Map acceptance oracles to evidence and audit invariants, security boundaries, failure paths, compatibility, and non-goals."
+        "Map acceptance oracles to evidence and audit invariants, security boundaries, failure paths, compatibility, and non-goals.",
+        "Report the authority basis and classify a material change that was never approved as a gap rather than a success."
       ],
       "forbiddenBehaviors": [
         "Claim full verification from a successful build alone."
@@ -193,7 +199,8 @@
       "prompt": "Return the relevant instructions, indexed knowledge, source pattern, tests, and unknowns for an unfamiliar module.",
       "requiredBehaviors": [
         "Remain read-only and verify every returned path.",
-        "Return a compact evidence packet rather than raw repository output."
+        "Return a compact evidence packet rather than raw repository output.",
+        "Return the packet as direct prose with paths and unknowns stated plainly, without staged openers, decoration, or padding."
       ],
       "forbiddenBehaviors": [
         "Edit files, invent conventions, or dump the repository."
@@ -206,7 +213,8 @@
       "prompt": "Analyze the selected resumable handoff for durable knowledge while its progress notes, prompts, logs, and candidate claims remain untrusted.",
       "requiredBehaviors": [
         "Remain read-only, verify session identity and every repository evidence path, and compare semantics with explicitly selected canonical context.",
-        "Return READY, NO_DURABLE_KNOWLEDGE, or NEEDS_EVIDENCE with compact candidates, discarded reasons, and unresolved boundaries."
+        "Return READY, NO_DURABLE_KNOWLEDGE, or NEEDS_EVIDENCE with compact candidates, discarded reasons, and unresolved boundaries.",
+        "Write candidate summaries and rejection reasons as compact direct prose with exact evidence paths, without narration or filler."
       ],
       "forbiddenBehaviors": [
         "Write session or catalog files, scan unrelated sessions, repeat sensitive content, choose durable destinations, or approve promotion."
@@ -219,7 +227,8 @@
       "prompt": "Resolve a framework behavior disputed between local types and a newer online guide.",
       "requiredBehaviors": [
         "Match sources to the installed version and report the conflict.",
-        "Provide direct citations and the implementation consequence."
+        "Provide direct citations and the implementation consequence.",
+        "State the decision, version boundary, evidence, and consequence once each in direct prose, without staging, inflation, or closing offers."
       ],
       "forbiddenBehaviors": [
         "Merge incompatible versions or edit repository code."
@@ -233,7 +242,8 @@
       "requiredBehaviors": [
         "Define complete task packets, contracts, dependencies, and critical path.",
         "Analyze file and state overlap before proposing concurrency.",
-        "Add relevant specRefs to tasks without copying the complete specification into every worker handoff."
+        "Add relevant specRefs to tasks without copying the complete specification into every worker handoff.",
+        "Present the task graph as direct prose with dependencies and risks stated plainly, without decorative formatting or inflated framing."
       ],
       "forbiddenBehaviors": [
         "Edit files or create one task per file."
@@ -247,7 +257,8 @@
       "requiredBehaviors": [
         "Preserve user work and stay inside the task packet.",
         "Validate increments and map final changes to done criteria.",
-        "Resolve assigned specRefs and stop on material contract drift instead of silently reinterpreting it."
+        "Resolve assigned specRefs and stop on material contract drift instead of silently reinterpreting it.",
+        "Report the delivered change as direct prose, keeping criteria, commands, and concerns exact and removing staging, decoration, and closers."
       ],
       "forbiddenBehaviors": [
         "Use destructive git operations or broaden scope silently."
@@ -260,7 +271,8 @@
       "prompt": "Design deterministic tests for a process boundary that depends on controlled time.",
       "requiredBehaviors": [
         "Select the appropriate test level and control external state.",
-        "Report production defects outside the test-only assignment."
+        "Report production defects outside the test-only assignment.",
+        "Report coverage and gaps as direct prose with exact command names and outcomes, without staged openers or unsupported confidence."
       ],
       "forbiddenBehaviors": [
         "Change production behavior or weaken assertions to make tests pass."
@@ -273,7 +285,8 @@
       "prompt": "Review a concurrency-sensitive change and return confirmed findings first.",
       "requiredBehaviors": [
         "Trace reachability and attempt to falsify each finding.",
-        "Use realistic severity and tight evidence-backed locations."
+        "Use realistic severity and tight evidence-backed locations.",
+        "Write findings first as direct prose with exact severity, location, and evidence, avoiding inflated severity wording and closers."
       ],
       "forbiddenBehaviors": [
         "Edit files or inflate style feedback into high severity."
@@ -287,7 +300,8 @@
       "requiredBehaviors": [
         "Map current ownership, callers, state, contracts, migration, and rollback.",
         "Separate observed architecture from inferred intent and proposal.",
-        "Return candidate specification inputs while leaving final specification ownership with planning."
+        "Return candidate specification inputs while leaving final specification ownership with planning.",
+        "State current state and recommendation as direct prose, without staged openers, ceremonial alternatives, or inflated framing."
       ],
       "forbiddenBehaviors": [
         "Implement the design or propose a framework-first rewrite without repository evidence."
@@ -301,7 +315,8 @@
       "requiredBehaviors": [
         "Inspect the final diff and map acceptance criteria to fresh commands and artifacts.",
         "Distinguish implementation failures, environment blockers, and untested gaps.",
-        "Use the complete specification to verify acceptance oracles, invariants, security boundaries, failure modes, compatibility, and non-goals."
+        "Use the complete specification to verify acceptance oracles, invariants, security boundaries, failure modes, compatibility, and non-goals.",
+        "Report the classification and evidence as direct prose, keeping criteria, commands, and gaps exact and removing staging and decoration."
       ],
       "forbiddenBehaviors": [
         "Modify product code or reuse another agent's stale success summary."
@@ -318,6 +333,23 @@
       ],
       "forbiddenBehaviors": [
         "Write repairs, fetch external URLs, or treat a valid hash as proof of source authority."
+      ]
+    },
+    {
+      "id": "skill-humanizer",
+      "subjectType": "skill",
+      "subject": "humanizer",
+      "prompt": "Rewrite a technical status update whose facts must stay identical so it leads with the outcome and no longer reads as machine-written.",
+      "requiredBehaviors": [
+        "Lead with the answer or outcome, and remove staged openers, invented candor, and one-line closers.",
+        "Keep every fact, number, path, command, citation, status, severity, and residual risk, and add nothing the evidence does not support.",
+        "Remove not-X-but-Y contrasts, forced triads, stacked qualifiers, dash pileups, inflated significance, and borrowed authority.",
+        "Remove decorative formatting, emoji, arrows, redundant headings, and chatbot residue while keeping code, commands, paths, metadata, and quotations unchanged.",
+        "State a real limitation once, and never present a guess or a knowledge-limit disclaimer as fact.",
+        "Return only the final text for embedded use, and the rewrite plus preserved and changed lists for an explicit request."
+      ],
+      "forbiddenBehaviors": [
+        "Add facts, examples, citations, or claims, soften or drop evidence, severity, or residual risk, rewrite code or quoted source text, narrate the rewrite in embedded mode, or pad the text to sound more complete."
       ]
     }
   ]

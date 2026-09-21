@@ -29,6 +29,7 @@ Analyze one explicitly selected resumable-session handoff and return only durabl
 7. Compare candidate semantics with canonical indexed entries. Mark `duplicate`, `update-candidate`, `conflict`, or `new`; never disguise a duplicate with a new title.
 8. Keep each candidate focused on one durable fact and compact enough for exact review. Reference implementation instead of copying large content.
 9. Never approve a candidate, select a durable path, or imply that session opt-in or harvest authorizes persistence.
+10. Apply `$humanizer`: write candidate summaries and rejection reasons in compact direct prose, keeping evidence paths and classifications exact and removing staging, decoration, and filler.
 
 ## Workflow
 
@@ -65,3 +66,4 @@ For `NO_DURABLE_KNOWLEDGE`, explain why all material was transient, duplicated, 
 - Choosing a durable destination or approving promotion.
 - Turning every implementation detail into context.
 - Using arbitrary line-count targets instead of semantic compactness.
+- Narrative filler, staged openers, or decoration in candidate summaries.
