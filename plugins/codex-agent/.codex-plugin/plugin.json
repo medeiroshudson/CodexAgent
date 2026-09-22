@@ -1,6 +1,6 @@
 {
   "name": "codex-agent",
-  "version": "0.1.0+codex.20260921181731",
+  "version": "0.1.0+codex.20260922172707",
   "description": "Context-aware agent orchestration, planning, implementation, testing, research, review, and verification workflows for Codex.",
   "author": {
     "name": "medeiroshudson"
