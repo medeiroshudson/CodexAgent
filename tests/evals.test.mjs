@@ -20,5 +20,5 @@ test("focused behavior contracts cover every skill and canonical agent", () => {
   const result = evaluateBehaviorContracts({ root });
   assert.deepEqual(result.failures, []);
   assert.equal(result.ok, true);
-  assert.equal(result.scenarios, result.skills + result.agents);
+  assert.ok(result.scenarios >= result.skills + result.agents, "every skill and agent needs a focused behavior case");
 });

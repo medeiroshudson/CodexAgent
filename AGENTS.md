@@ -10,6 +10,7 @@ Build and maintain the `codex-agent` plugin with native Codex conventions. Keep 
 - Keep durable repository rules in `AGENTS.md`; keep reusable workflows in skills; keep deterministic enforcement in hooks or scripts.
 - Plugin slash commands are not a supported contract. Keep CLI handlers thin and let the corresponding skill own each workflow.
 - Keep every skill focused on one job and use progressive disclosure through direct `references/` links.
+- Keep the answer-language and brevity rule in `plugins/codex-agent/skills/humanizer/references/response-contract.md`; the agent synchronizer injects that block into every prompt, so never restate it per agent.
 - Prefer read-only agents for discovery, research, and review. Grant workspace write access only to implementation or test-authoring roles.
 - Do not make any model mandatory for plugin operation. `$agent-orchestration` may request a runtime-advertised model and reasoning effort through its capability-based routing contract; respect user or project-profile pins and fall back to parent inheritance when an override is unavailable or unjustified.
 - Keep session state ephemeral unless the user explicitly opts in to resumability. The orchestrator is the sole session writer, and durable context promotion always requires separate curation approval.

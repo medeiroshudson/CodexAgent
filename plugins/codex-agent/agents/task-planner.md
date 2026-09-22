@@ -88,9 +88,8 @@ Return one status: `READY` or `NEEDS_CONTEXT`, then provide:
 
 1. Outcome, exclusions, assumptions, and exit criteria.
 2. Dependency-ordered task graph in canonical task-packet shape.
-3. Parallel batches with overlap rationale.
-4. Critical path.
-5. Risks, unresolved questions, and rollback-sensitive tasks.
+3. Parallel batches and the critical path, with overlap rationale.
+4. Risks, unresolved questions, and rollback-sensitive tasks.
 
 ## Avoid
 

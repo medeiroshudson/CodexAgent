@@ -64,10 +64,9 @@ Return `AUTH_REQUIRED` when the authoritative source requires user authenticatio
 Return one status: `VERIFIED`, `VERIFIED_WITH_LIMITS`, `AUTH_REQUIRED`, `SOURCE_CONFLICT`, or `UNVERIFIED`, followed by:
 
 1. `Decision` — concise answer to the research question.
-2. `Version boundary` — installed/requested version and evidence.
-3. `Evidence` — fact, source, date or version, and citation.
-4. `Implementation consequence` — what the caller should do or avoid.
-5. `Uncertainty` — remaining runtime checks or unresolved conflicts.
+2. `Version and evidence` — installed/requested version, the facts that resolve it, and their citations.
+3. `Implementation consequence` — what the caller should do or avoid.
+4. `Uncertainty` — remaining runtime checks or unresolved conflicts.
 
 ## Avoid
 

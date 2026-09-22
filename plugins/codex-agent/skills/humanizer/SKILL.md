@@ -32,6 +32,7 @@ Prose a person would plausibly write: one direct answer, the same facts, and no 
 12. Describe current behavior, not the version the text replaced; keep replacement framing for changelogs and migration guides.
 13. Match a supplied sample over every rule here, and keep the user's language, terminology, identifiers, and severity labels.
 14. Change prose only. Code blocks, inline code, commands, paths, YAML, data, and link targets stay exact.
+15. Answer in the language of the conversation and keep the shortest form that carries the meaning. [The response contract](references/response-contract.md) holds the exact block injected into every agent prompt.
 
 ## Workflow
 
@@ -43,7 +44,7 @@ Prose a person would plausibly write: one direct answer, the same facts, and no 
 6. **Check what changed**: confirm nothing was added and nothing supported was dropped, then read the result once for anything that still sounds staged.
 7. **Deliver** per the output contract for that mode.
 
-Read [the answer shape](references/answer-shape.md) before writing a user-facing answer or embedded text, and [the pattern catalog](references/ai-writing-patterns.md) before revising prose you did not draft.
+Read [the answer shape](references/answer-shape.md) and [the response contract](references/response-contract.md) before writing a user-facing answer or embedded text, and [the pattern catalog](references/ai-writing-patterns.md) before revising prose you did not draft.
 
 ## Output contract
 

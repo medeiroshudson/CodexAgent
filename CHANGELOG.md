@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added `humanizer/references/response-contract.md`, the single source for the answer-language and brevity block injected into every canonical agent prompt, and made the agent-prompt synchronizer embed it so the rule cannot drift across nine files.
+- Put answer language and length in the always-on surfaces: the session-start and completion hooks now require the conversation's language and the shortest form that carries the meaning, with empty sections omitted.
+- Extended the behavior contracts with language and brevity rubrics for every agent, the humanizer, orchestration, code-review, verification, and implementation skills, plus a Portuguese-prompt case and a minimal-task case that expect a short answer.
+- Trimmed the longest agent return contracts, merging `architecture_analyst` to five sections, `docs_researcher` to four, and `task_planner` to four, while keeping every contract key stable.
 - Replaced `project-init` and the legacy `init --refresh` surface with explicit `$context-init`, `$context-refresh`, `context init`, and `context refresh` workflows.
 - Moved versioned project knowledge from `.agents/context/` to `.codex-agent/context/` with canonical-first resolution, conflict blocking, safe migration, locks, backups, transactions, and rollback.
 - Bound apply to the exact reviewed deterministic analysis and post-migration file plan, with an umbrella lifecycle journal that recovers interrupted catalog and managed-file phases together.

@@ -10,14 +10,15 @@
 | `.agents/plugins/marketplace.json` | Repository marketplace declaration; it is not moved with context |
 | `plugins/codex-agent/skills/` | Reusable workflows with progressive disclosure |
 | `agent-orchestration` skill | Classification, opt-in session ownership, minimal handoffs, integration, evidence, and the single user-facing answer |
-| `humanizer` skill | Direct-answer shaping and the AI writing tells removed from answers, agent returns, and embedded text |
+| `humanizer` skill | Direct-answer shaping, answer language and length, and the AI writing tells removed from answers, agent returns, and embedded text |
 | `plan-and-approve` skill | Materiality test, approval boundaries, and the in-memory specification contract |
 | `context-init` / `context-refresh` | First setup and reconciliation workflows with separate state gates |
 | `context-harvest` / `context-curation` | Temporary extraction and separately approved durable promotion |
 | `plugins/codex-agent/agents/` | Canonical narrow role instructions and native profile metadata |
+| `humanizer/references/response-contract.md` | Single source for the answer-language and brevity block injected into every agent prompt |
 | `plugins/codex-agent/generated/agent-profiles.mjs` | Generated prompt definitions embedded in the self-contained CLI bundle |
 | `.codex/agents/` templates | Generated project-specific sandbox and subagent configuration |
-| `scripts/sync-agent-profiles.mjs` | Canonical-agent parser, module renderer, and TOML synchronizer |
+| `scripts/sync-agent-profiles.mjs` | Canonical-agent parser, response-contract injector, module renderer, and TOML synchronizer |
 | `plugins/codex-agent/scripts/lib/` | Safe paths, catalog resolution, locks, transactions, hashes, and migration |
 | `plugins/codex-agent/scripts/session-store.mjs` | Internal sole-writer resumable-session state with manifest revisions |
 | `plugins/codex-agent/scripts/context-candidate.mjs` | Temporary candidate Markdown parser, validator, and proposal adapter |
@@ -39,7 +40,7 @@ The plugin does not distribute `commands/*.md`. Skills are the portable interact
 6. Implement incrementally with serialized overlapping writes.
 7. When explicitly resumable, update the Markdown handoff through the parent orchestrator only.
 8. Integrate, review engineering risk, and verify the final workspace with fresh evidence.
-9. Deliver one direct answer in the user's language under the `$humanizer` rules, keeping every fact, status, severity, and gap exact.
+9. Deliver one direct answer in the user's language under the `$humanizer` rules and [the response contract](../plugins/codex-agent/skills/humanizer/references/response-contract.md), keeping every fact, status, severity, and gap exact and omitting empty sections.
 10. Optionally harvest durable candidates after the primary outcome; promotion remains a separate approval boundary.
 
 ## Context root contract

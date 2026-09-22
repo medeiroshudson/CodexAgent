@@ -21,10 +21,13 @@
         "Keep the complete specification contract with integration and verification while workers receive only relevant specRefs.",
         "Wait for all results required by the coordination plan, inspect their evidence, and return one integrated synthesis.",
         "Finish with fresh verification mapped to completion criteria from the integrated state.",
-        "Apply the materiality test before the first write and report the authority basis in the integrated answer."
+        "Apply the materiality test before the first write and report the authority basis in the integrated answer.",
+        "Answer in the language of the conversation, keeping identifiers and the defined contract keys exact.",
+        "Keep the return short: omit empty sections, add no preamble or closing offer, and use the shortest form that carries the meaning."
       ],
       "forbiddenBehaviors": [
-        "Force fan-out, assign overlapping writes, use Luna as a coordinator, use medium as the ordinary Luna baseline, default every worker to Sol, invent model availability, make a model mandatory, silently substitute an unavailable model, dump raw subagent reports, request approval for the already approved plan, create sessions from complexity, expose session commands or flags, or let subagents write shared session files."
+        "Force fan-out, assign overlapping writes, use Luna as a coordinator, use medium as the ordinary Luna baseline, default every worker to Sol, invent model availability, make a model mandatory, silently substitute an unavailable model, dump raw subagent reports, request approval for the already approved plan, create sessions from complexity, expose session commands or flags, or let subagents write shared session files.",
+        "Pad the return with empty sections, restate the request, or switch languages."
       ]
     },
     {
@@ -80,10 +83,13 @@
         "Inspect and preserve unrelated user changes.",
         "Reuse nearby patterns, validate incrementally, and inspect the final diff.",
         "Preserve referenced non-goals, invariants, security boundaries, and failure behavior and report material contract drift.",
-        "Stop for approval when the work matches the materiality test or would reinterpret an approved contract."
+        "Stop for approval when the work matches the materiality test or would reinterpret an approved contract.",
+        "Answer in the language of the conversation, keeping identifiers and the defined contract keys exact.",
+        "Keep the return short: omit empty sections, add no preamble or closing offer, and use the shortest form that carries the meaning."
       ],
       "forbiddenBehaviors": [
-        "Reset the worktree or ask for repeated approval for in-scope corrections."
+        "Reset the worktree or ask for repeated approval for in-scope corrections.",
+        "Pad the return with empty sections, restate the request, or switch languages."
       ]
     },
     {
@@ -106,10 +112,13 @@
       "prompt": "Review a transaction change for data loss and retry behavior without editing.",
       "requiredBehaviors": [
         "Trace the complete changed state path and attempt to falsify candidate findings.",
-        "Report only actionable findings with location, trigger, impact, evidence, and remediation."
+        "Report only actionable findings with location, trigger, impact, evidence, and remediation.",
+        "Answer in the language of the conversation, keeping identifiers and the defined contract keys exact.",
+        "Keep the return short: omit empty sections, add no preamble or closing offer, and use the shortest form that carries the meaning."
       ],
       "forbiddenBehaviors": [
-        "Apply fixes or report style preferences as defects."
+        "Apply fixes or report style preferences as defects.",
+        "Pad the return with empty sections, restate the request, or switch languages."
       ]
     },
     {
@@ -134,10 +143,13 @@
         "Map each criterion to fresh evidence and inspect package artifacts.",
         "Classify unexercised runtime installation as a gap rather than success.",
         "Map acceptance oracles to evidence and audit invariants, security boundaries, failure paths, compatibility, and non-goals.",
-        "Report the authority basis and classify a material change that was never approved as a gap rather than a success."
+        "Report the authority basis and classify a material change that was never approved as a gap rather than a success.",
+        "Answer in the language of the conversation, keeping identifiers and the defined contract keys exact.",
+        "Keep the return short: omit empty sections, add no preamble or closing offer, and use the shortest form that carries the meaning."
       ],
       "forbiddenBehaviors": [
-        "Claim full verification from a successful build alone."
+        "Claim full verification from a successful build alone.",
+        "Pad the return with empty sections, restate the request, or switch languages."
       ]
     },
     {
@@ -200,10 +212,13 @@
       "requiredBehaviors": [
         "Remain read-only and verify every returned path.",
         "Return a compact evidence packet rather than raw repository output.",
-        "Return the packet as direct prose with paths and unknowns stated plainly, without staged openers, decoration, or padding."
+        "Return the packet as direct prose with paths and unknowns stated plainly, without staged openers, decoration, or padding.",
+        "Answer in the language of the conversation, keeping identifiers and the defined contract keys exact.",
+        "Keep the return short: omit empty sections, add no preamble or closing offer, and use the shortest form that carries the meaning."
       ],
       "forbiddenBehaviors": [
-        "Edit files, invent conventions, or dump the repository."
+        "Edit files, invent conventions, or dump the repository.",
+        "Pad the return with empty sections, restate the request, or switch languages."
       ]
     },
     {
@@ -214,10 +229,13 @@
       "requiredBehaviors": [
         "Remain read-only, verify session identity and every repository evidence path, and compare semantics with explicitly selected canonical context.",
         "Return READY, NO_DURABLE_KNOWLEDGE, or NEEDS_EVIDENCE with compact candidates, discarded reasons, and unresolved boundaries.",
-        "Write candidate summaries and rejection reasons as compact direct prose with exact evidence paths, without narration or filler."
+        "Write candidate summaries and rejection reasons as compact direct prose with exact evidence paths, without narration or filler.",
+        "Answer in the language of the conversation, keeping identifiers and the defined contract keys exact.",
+        "Keep the return short: omit empty sections, add no preamble or closing offer, and use the shortest form that carries the meaning."
       ],
       "forbiddenBehaviors": [
-        "Write session or catalog files, scan unrelated sessions, repeat sensitive content, choose durable destinations, or approve promotion."
+        "Write session or catalog files, scan unrelated sessions, repeat sensitive content, choose durable destinations, or approve promotion.",
+        "Pad the return with empty sections, restate the request, or switch languages."
       ]
     },
     {
@@ -228,10 +246,13 @@
       "requiredBehaviors": [
         "Match sources to the installed version and report the conflict.",
         "Provide direct citations and the implementation consequence.",
-        "State the decision, version boundary, evidence, and consequence once each in direct prose, without staging, inflation, or closing offers."
+        "State the decision, version boundary, evidence, and consequence once each in direct prose, without staging, inflation, or closing offers.",
+        "Answer in the language of the conversation, keeping identifiers and the defined contract keys exact.",
+        "Keep the return short: omit empty sections, add no preamble or closing offer, and use the shortest form that carries the meaning."
       ],
       "forbiddenBehaviors": [
-        "Merge incompatible versions or edit repository code."
+        "Merge incompatible versions or edit repository code.",
+        "Pad the return with empty sections, restate the request, or switch languages."
       ]
     },
     {
@@ -243,10 +264,13 @@
         "Define complete task packets, contracts, dependencies, and critical path.",
         "Analyze file and state overlap before proposing concurrency.",
         "Add relevant specRefs to tasks without copying the complete specification into every worker handoff.",
-        "Present the task graph as direct prose with dependencies and risks stated plainly, without decorative formatting or inflated framing."
+        "Present the task graph as direct prose with dependencies and risks stated plainly, without decorative formatting or inflated framing.",
+        "Answer in the language of the conversation, keeping identifiers and the defined contract keys exact.",
+        "Keep the return short: omit empty sections, add no preamble or closing offer, and use the shortest form that carries the meaning."
       ],
       "forbiddenBehaviors": [
-        "Edit files or create one task per file."
+        "Edit files or create one task per file.",
+        "Pad the return with empty sections, restate the request, or switch languages."
       ]
     },
     {
@@ -258,10 +282,13 @@
         "Preserve user work and stay inside the task packet.",
         "Validate increments and map final changes to done criteria.",
         "Resolve assigned specRefs and stop on material contract drift instead of silently reinterpreting it.",
-        "Report the delivered change as direct prose, keeping criteria, commands, and concerns exact and removing staging, decoration, and closers."
+        "Report the delivered change as direct prose, keeping criteria, commands, and concerns exact and removing staging, decoration, and closers.",
+        "Answer in the language of the conversation, keeping identifiers and the defined contract keys exact.",
+        "Keep the return short: omit empty sections, add no preamble or closing offer, and use the shortest form that carries the meaning."
       ],
       "forbiddenBehaviors": [
-        "Use destructive git operations or broaden scope silently."
+        "Use destructive git operations or broaden scope silently.",
+        "Pad the return with empty sections, restate the request, or switch languages."
       ]
     },
     {
@@ -272,10 +299,13 @@
       "requiredBehaviors": [
         "Select the appropriate test level and control external state.",
         "Report production defects outside the test-only assignment.",
-        "Report coverage and gaps as direct prose with exact command names and outcomes, without staged openers or unsupported confidence."
+        "Report coverage and gaps as direct prose with exact command names and outcomes, without staged openers or unsupported confidence.",
+        "Answer in the language of the conversation, keeping identifiers and the defined contract keys exact.",
+        "Keep the return short: omit empty sections, add no preamble or closing offer, and use the shortest form that carries the meaning."
       ],
       "forbiddenBehaviors": [
-        "Change production behavior or weaken assertions to make tests pass."
+        "Change production behavior or weaken assertions to make tests pass.",
+        "Pad the return with empty sections, restate the request, or switch languages."
       ]
     },
     {
@@ -286,10 +316,13 @@
       "requiredBehaviors": [
         "Trace reachability and attempt to falsify each finding.",
         "Use realistic severity and tight evidence-backed locations.",
-        "Write findings first as direct prose with exact severity, location, and evidence, avoiding inflated severity wording and closers."
+        "Write findings first as direct prose with exact severity, location, and evidence, avoiding inflated severity wording and closers.",
+        "Answer in the language of the conversation, keeping identifiers and the defined contract keys exact.",
+        "Keep the return short: omit empty sections, add no preamble or closing offer, and use the shortest form that carries the meaning."
       ],
       "forbiddenBehaviors": [
-        "Edit files or inflate style feedback into high severity."
+        "Edit files or inflate style feedback into high severity.",
+        "Pad the return with empty sections, restate the request, or switch languages."
       ]
     },
     {
@@ -301,10 +334,13 @@
         "Map current ownership, callers, state, contracts, migration, and rollback.",
         "Separate observed architecture from inferred intent and proposal.",
         "Return candidate specification inputs while leaving final specification ownership with planning.",
-        "State current state and recommendation as direct prose, without staged openers, ceremonial alternatives, or inflated framing."
+        "State current state and recommendation as direct prose, without staged openers, ceremonial alternatives, or inflated framing.",
+        "Answer in the language of the conversation, keeping identifiers and the defined contract keys exact.",
+        "Keep the return short: omit empty sections, add no preamble or closing offer, and use the shortest form that carries the meaning."
       ],
       "forbiddenBehaviors": [
-        "Implement the design or propose a framework-first rewrite without repository evidence."
+        "Implement the design or propose a framework-first rewrite without repository evidence.",
+        "Pad the return with empty sections, restate the request, or switch languages."
       ]
     },
     {
@@ -316,10 +352,13 @@
         "Inspect the final diff and map acceptance criteria to fresh commands and artifacts.",
         "Distinguish implementation failures, environment blockers, and untested gaps.",
         "Use the complete specification to verify acceptance oracles, invariants, security boundaries, failure modes, compatibility, and non-goals.",
-        "Report the classification and evidence as direct prose, keeping criteria, commands, and gaps exact and removing staging and decoration."
+        "Report the classification and evidence as direct prose, keeping criteria, commands, and gaps exact and removing staging and decoration.",
+        "Answer in the language of the conversation, keeping identifiers and the defined contract keys exact.",
+        "Keep the return short: omit empty sections, add no preamble or closing offer, and use the shortest form that carries the meaning."
       ],
       "forbiddenBehaviors": [
-        "Modify product code or reuse another agent's stale success summary."
+        "Modify product code or reuse another agent's stale success summary.",
+        "Pad the return with empty sections, restate the request, or switch languages."
       ]
     },
     {
@@ -346,10 +385,41 @@
         "Remove not-X-but-Y contrasts, forced triads, stacked qualifiers, dash pileups, inflated significance, and borrowed authority.",
         "Remove decorative formatting, emoji, arrows, redundant headings, and chatbot residue while keeping code, commands, paths, metadata, and quotations unchanged.",
         "State a real limitation once, and never present a guess or a knowledge-limit disclaimer as fact.",
-        "Return only the final text for embedded use, and the rewrite plus preserved and changed lists for an explicit request."
+        "Return only the final text for embedded use, and the rewrite plus preserved and changed lists for an explicit request.",
+        "Answer in the language of the conversation, keeping identifiers and the defined contract keys exact.",
+        "Keep the return short: omit empty sections, add no preamble or closing offer, and use the shortest form that carries the meaning."
       ],
       "forbiddenBehaviors": [
-        "Add facts, examples, citations, or claims, soften or drop evidence, severity, or residual risk, rewrite code or quoted source text, narrate the rewrite in embedded mode, or pad the text to sound more complete."
+        "Add facts, examples, citations, or claims, soften or drop evidence, severity, or residual risk, rewrite code or quoted source text, narrate the rewrite in embedded mode, or pad the text to sound more complete.",
+        "Pad the return with empty sections, restate the request, or switch languages."
+      ]
+    },
+    {
+      "id": "skill-code-review-pt",
+      "subjectType": "skill",
+      "subject": "code-review",
+      "prompt": "Revise este diff de concorrência em português e responda no mesmo idioma do pedido.",
+      "requiredBehaviors": [
+        "Write the entire response in Portuguese, the language of the conversation.",
+        "Keep the defined contract keys and file paths in their exact form while the surrounding prose stays in Portuguese.",
+        "Return findings first and omit any section with nothing to report, with no preamble or closing offer."
+      ],
+      "forbiddenBehaviors": [
+        "Answer in English, mix languages inside the response, or pad the review with empty sections."
+      ]
+    },
+    {
+      "id": "agent-implementer-minimal",
+      "subjectType": "agent",
+      "subject": "implementer",
+      "prompt": "Corrija um erro de digitação no nome de uma variável e relate o resultado.",
+      "requiredBehaviors": [
+        "Answer in Portuguese, the language of the conversation.",
+        "Return one or two lines instead of a multi-section report when the change is tiny.",
+        "Keep the validation command and its outcome exact."
+      ],
+      "forbiddenBehaviors": [
+        "Produce a full multi-section report, restate the task, or omit the validation evidence."
       ]
     }
   ]

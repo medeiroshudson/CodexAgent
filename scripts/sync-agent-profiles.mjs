@@ -10,6 +10,27 @@ const allowedFields = new Set(["name", "description", "sandbox_mode"]);
 const allowedSandboxes = new Set(["read-only", "workspace-write"]);
 const normalizeLineEndings = (value) => value.replace(/\r\n?/g, "\n");
 
+const responseContractPath = (root) => path.join(
+  root, "plugins", "codex-agent", "skills", "humanizer", "references", "response-contract.md"
+);
+
+// The response contract is the single source for answer language and length. It is injected here so
+// every generated profile carries identical text and the rule cannot drift across nine agent files.
+export const loadOutputDiscipline = (root = defaultRoot) => {
+  const contractPath = responseContractPath(root);
+  if (!fs.existsSync(contractPath)) throw new Error(`Response contract not found: ${contractPath}`);
+  const contract = normalizeLineEndings(fs.readFileSync(contractPath, "utf8"));
+  const match = contract.match(/<!-- output-discipline:start -->\n([\s\S]*?)\n<!-- output-discipline:end -->/);
+  if (!match) throw new Error(`${contractPath}: missing output-discipline block`);
+  return match[1].trim();
+};
+
+export const injectOutputDiscipline = (developerInstructions, discipline) => {
+  const headingEnd = developerInstructions.indexOf("\n\n");
+  if (headingEnd < 0) return `${developerInstructions}\n\n${discipline}`;
+  return `${developerInstructions.slice(0, headingEnd)}\n\n${discipline}\n\n${developerInstructions.slice(headingEnd + 2)}`;
+};
+
 const parseScalar = (value) => {
   const trimmed = value.trim();
   if (!trimmed) return "";
@@ -66,7 +87,11 @@ export const loadAgentDefinitions = (root = defaultRoot) => {
     if (names.has(definition.name)) throw new Error(`Duplicate agent name: ${definition.name}`);
     names.add(definition.name);
   }
-  return definitions;
+  const discipline = loadOutputDiscipline(root);
+  return definitions.map((definition) => ({
+    ...definition,
+    developerInstructions: injectOutputDiscipline(definition.developerInstructions, discipline)
+  }));
 };
 
 export const renderAgentProfilesModule = (definitions) => [

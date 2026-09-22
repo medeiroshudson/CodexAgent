@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { agentProfiles } from "../plugins/codex-agent/generated/agent-profiles.mjs";
 import { validateContextIndex } from "../plugins/codex-agent/scripts/lib/context-index.mjs";
-import { loadAgentDefinitions, renderAgentProfilesModule, renderAgentToml } from "./sync-agent-profiles.mjs";
+import { loadAgentDefinitions, loadOutputDiscipline, renderAgentProfilesModule, renderAgentToml } from "./sync-agent-profiles.mjs";
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const defaultRoot = path.resolve(scriptDirectory, "..");
@@ -90,6 +90,7 @@ export const validateWorkspace = (root = defaultRoot) => {
   requireFile("plugins/codex-agent/skills/context-curation/scripts/navigation-migrate.mjs");
   requireFile("plugins/codex-agent/skills/context-lint/scripts/context-lint.mjs");
   requireFile("plugins/codex-agent/skills/plan-and-approve/references/spec-contract.md");
+  requireFile("plugins/codex-agent/skills/humanizer/references/response-contract.md");
 
   for (const schema of [contextIndexSchemaPath, contextProposalSchemaPath, contextCandidateSchemaPath, sessionManifestSchemaPath, modelEvalSchemaPath]) {
     if (fs.existsSync(schema)) parseJson(schema, errors);
@@ -104,10 +105,12 @@ export const validateWorkspace = (root = defaultRoot) => {
     if (fs.existsSync(generatedAgentsPath) && normalizeLineEndings(fs.readFileSync(generatedAgentsPath, "utf8")) !== renderAgentProfilesModule(canonicalAgents)) {
       errors.push("generated agent profile module is out of sync; run npm run agents:sync");
     }
+    const discipline = loadOutputDiscipline(workspace);
     for (const definition of canonicalAgents) {
-      for (const heading of ["Mission", "Operating contract", "Critical rules", "Workflow", "Return contract", "Avoid"]) {
+      for (const heading of ["Output discipline", "Mission", "Operating contract", "Critical rules", "Workflow", "Return contract", "Avoid"]) {
         if (!new RegExp(`^## ${heading}$`, "m").test(definition.developerInstructions)) errors.push(`${definition.source}: missing required heading ${heading}`);
       }
+      if (!definition.developerInstructions.includes(discipline)) errors.push(`${definition.source}: response contract block is missing or divergent`);
       const template = path.join(workspace, "templates", "project", ".codex", "agents", definition.file);
       if (!fs.existsSync(template)) errors.push(`missing generated agent template: ${path.relative(workspace, template)}`);
       else if (normalizeLineEndings(fs.readFileSync(template, "utf8")) !== renderAgentToml(definition)) errors.push(`${path.relative(workspace, template)}: out of sync with canonical prompt`);

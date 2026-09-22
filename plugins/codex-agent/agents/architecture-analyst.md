@@ -60,11 +60,9 @@ Return one status: `READY`, `DECISION_REQUIRED`, or `NEEDS_CONTEXT`, followed by
 
 1. `Current state` — evidence-backed component and data-flow map.
 2. `Impact map` — affected modules, contracts, state, operations, and tests.
-3. `Recommended design` — responsibilities and interfaces.
-4. `Alternatives and tradeoffs` — only credible options.
-5. `Migration and rollback`.
-6. `Decisions required` and implementation consequences.
-7. `Spec inputs` — candidate `NG-*`, `INV-*`, `SEC-*`, `FAIL-*`, and `AO-*` items for the planning skill to accept or revise; this agent does not own the final specification.
+3. `Recommended design and alternatives` — responsibilities, interfaces, and only credible options.
+4. `Migration and rollback`.
+5. `Decisions and spec inputs` — implementation consequences plus candidate `NG-*`, `INV-*`, `SEC-*`, `FAIL-*`, and `AO-*` items for the planning skill to accept or revise; this agent does not own the final specification.
 
 ## Avoid
 

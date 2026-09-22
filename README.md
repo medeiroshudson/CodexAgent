@@ -161,7 +161,7 @@ $agent-orchestration → discovery → task graph → bounded agents
 → integration → focused review → fresh verification
 ```
 
-Every flow ends with one direct answer in the user's language: the outcome first, exact evidence, and no staged openers, decorative formatting, inflated significance, or closing offers. `$humanizer` owns that rule and applies it to any text the user will keep, such as commit messages, pull-request descriptions, and documentation.
+Every flow ends with one short answer in the user's language: the outcome first, exact evidence, empty sections omitted, and no staged openers, decorative formatting, inflated significance, or closing offers. `$humanizer` owns that rule and applies it to any text the user will keep, such as commit messages, pull-request descriptions, and documentation. [The response contract](plugins/codex-agent/skills/humanizer/references/response-contract.md) is the single source for the language and length block that every agent prompt embeds.
 
 Planning is not repeated when the user has already approved a concrete plan, and ordinary in-scope corrections do not require repeated approval. A material change does: it needs a presented plan and explicit approval before the first write, even when the request arrives as an instruction.
 
@@ -433,7 +433,7 @@ Project initialization installs nine focused agent profiles. Read-heavy roles ar
 | `test_engineer` | Workspace-write | Focused deterministic tests and fixtures |
 | `build_verifier` | Workspace-write | Independent final checks and generated verification artifacts |
 
-Every agent returns direct prose: status first, then evidence, gaps, and risk, with no staged opener, decoration, or closing offer. The root agent rewrites those returns into one answer for the user instead of forwarding them.
+Every agent returns direct prose in the conversation's language: status first, then evidence, gaps, and risk, with no staged opener, decoration, empty section, or closing offer. The root agent rewrites those returns into one answer for the user instead of forwarding them.
 
 Project templates default to four concurrent threads and a maximum depth of one. Independent read work can run in parallel. Overlapping source files, tests, lockfiles, generated state, migrations, and mutable external resources must be serialized or isolated in separate worktrees.
 
@@ -632,6 +632,7 @@ Use `npm run agents:sync` after changing canonical agent Markdown. Plugin-ingest
 - [Context health contract](plugins/codex-agent/skills/context-lint/references/health-contract.md)
 - [AI writing patterns](plugins/codex-agent/skills/humanizer/references/ai-writing-patterns.md)
 - [Answer shape](plugins/codex-agent/skills/humanizer/references/answer-shape.md)
+- [Response contract](plugins/codex-agent/skills/humanizer/references/response-contract.md)
 - [Discovery protocol](plugins/codex-agent/skills/context-discovery/references/discovery-protocol.md)
 - [Contributing and validation](CONTRIBUTING.md)
 - [CLI release process](docs/releasing-cli.md)

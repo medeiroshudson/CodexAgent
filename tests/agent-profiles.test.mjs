@@ -40,7 +40,7 @@ test("canonical agent prompts declare native scope and substantial instructions"
   for (const definition of definitions) {
     assert.ok(definition.description.length >= 40);
     assert.ok(["read-only", "workspace-write"].includes(definition.sandboxMode));
-    for (const heading of ["Mission", "Operating contract", "Critical rules", "Workflow", "Return contract", "Avoid"]) {
+    for (const heading of ["Output discipline", "Mission", "Operating contract", "Critical rules", "Workflow", "Return contract", "Avoid"]) {
       assert.match(definition.developerInstructions, new RegExp(`^## ${heading}$`, "m"), `${definition.name} is missing ${heading}`);
     }
   }

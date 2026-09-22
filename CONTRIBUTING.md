@@ -42,6 +42,7 @@ See [docs/releasing-cli.md](docs/releasing-cli.md) for initial npm setup and the
 - Keep canonical agent prompts under `plugins/codex-agent/agents/`; run `npm run agents:sync` after editing them and never edit generated TOML or ESM profiles directly.
 - Do not add plugin `commands/*.md`; use skills for portable interactive workflows and keep the npm CLI deterministic.
 - Put detailed skill material one level below `references/`.
+- Keep answer language and length in `humanizer/references/response-contract.md`. The agent synchronizer injects that block, so do not restate it in individual agent prompts.
 - Do not add a custom installer for behavior already provided by the Codex marketplace.
 - Keep hooks optional, fast, cross-platform, and non-destructive.
 - Classify materiality before mutating: a distributed surface, a cross-cutting rule, or a public contract needs a presented plan and explicit approval first, even when the request arrives as an instruction. `$plan-and-approve` owns [the materiality test](plugins/codex-agent/skills/plan-and-approve/references/approval-policy.md).
